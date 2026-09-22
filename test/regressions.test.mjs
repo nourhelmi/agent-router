@@ -10,7 +10,7 @@ import { fitCriteria } from '../dist/jev.js';
 import { fixture, candidate, mapping, request } from './helpers.mjs';
 
 test('renew samples expiry after acquiring the writer lock, not before waiting', async t => {
-  const f = await fixture(t); f.config.candidates = [candidate('a')]; f.config.pools[0].maxConcurrent = 1; await f.save();
+  const f = await fixture(t); f.config.candidates = [candidate('a')]; await f.save();
   const first = await route(request, f.options), expiry = Date.parse(first.expiresAt);
   let clock = expiry - 1; t.mock.method(Date, 'now', () => clock);
   const transaction = Store.prototype.transaction;

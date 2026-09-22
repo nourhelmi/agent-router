@@ -6,7 +6,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { route, renew, release } from '../dist/index.js';
 import { Store } from '../dist/store.js';
-import { evaluate } from '../dist/engine.js';
+import { evaluate, ranked } from '../dist/engine.js';
 import { loadConfig, validateRequest, quotaSnapshot } from '../dist/config.js';
 import { fixture, candidate, quota, request } from './helpers.mjs';
 const exec = promisify(execFile);
@@ -81,20 +81,45 @@ test('request IDs are idempotent, mismatched reuse and expired resurrection fail
   await assert.rejects(route(r, f.options), { code: 'AGENT_ROUTER_REQUEST_SETTLED' });
   assert.notEqual((await route({ ...request, requestId: 'new' }, f.options)).id, a.id);
 });
-test('shared pool capacity is atomic across processes, not per model', async t => {
-  const f = await fixture(t); f.config.candidates = [candidate('a'), candidate('b')]; f.config.pools[0].maxConcurrent = 2; await f.save();
-  const code = `import {route} from ${JSON.stringify(new URL('../dist/index.js', import.meta.url).href)};try{console.log(JSON.stringify(await route(${JSON.stringify(request)},{configPath:process.argv[1]})))}catch(e){console.log(JSON.stringify({error:e.code}));}`;
-  const results = await Promise.all(Array.from({ length: 8 }, () => exec(process.execPath, ['--input-type=module', '-e', code, f.path])));
-  const rows = results.map(r => JSON.parse(r.stdout));
-  assert.equal(rows.filter(r => r.reserved).length, 2);
-  assert.equal(rows.filter(r => r.error === noRoute.code).length, 6);
+test('reservation counts are diagnostic only, including with legacy cap fields', async t => {
+  const f = await fixture(t);
+  for (const legacy of [false, true]) {
+    if (legacy) for (const pool of f.config.pools) pool.maxConcurrent = 1;
+    for (const quotas of [new Map([['codex', quota('codex')], ['claude', quota('claude')]]), new Map()]) {
+      const baseline = evaluate(f.config, request, quotas, new Map(), []);
+      const withoutActive = ({ active, ...row }) => row;
+      for (const count of [1, 3, 4, 1001, 1000000]) {
+        const rows = evaluate(f.config, request, quotas, new Map([['codex', count]]), []);
+        assert.equal(rows[0].active, count);
+        assert.deepEqual(rows.map(withoutActive), baseline.map(withoutActive));
+        assert.deepEqual(ranked(f.config, rows).map(r => r.id), ranked(f.config, baseline).map(r => r.id));
+      }
+    }
+  }
+});
+test('independent processes all acquire leases without a pool count limit', async t => {
+  for (const legacy of [false, true]) {
+    const f = await fixture(t); f.config.candidates = [candidate('a'), candidate('b')];
+    if (legacy) for (const pool of f.config.pools) pool.maxConcurrent = 1;
+    await f.save();
+    const code = `import {route} from ${JSON.stringify(new URL('../dist/index.js', import.meta.url).href)};try{console.log(JSON.stringify(await route(${JSON.stringify(request)},{configPath:process.argv[1]})))}catch(e){console.log(JSON.stringify({error:e.code}));}`;
+    const results = await Promise.all(Array.from({ length: 8 }, () => exec(process.execPath, ['--input-type=module', '-e', code, f.path])));
+    const rows = results.map(r => JSON.parse(r.stdout));
+    assert.equal(rows.filter(r => r.reserved).length, 8);
+    assert.equal(new Set(rows.map(r => r.id)).size, 8);
+    assert.ok(rows.every(r => r.selected.model === 'openai-codex/a'));
+    const store = new Store(f.config);
+    try { assert.equal(store.active().get('codex'), 8); } finally { store.close(); }
+  }
 });
 test('concurrent duplicate requests share one reservation', async t => {
-  const f = await fixture(t); f.config.candidates = [candidate('a')]; f.config.pools[0].maxConcurrent = 1; await f.save();
+  const f = await fixture(t); f.config.candidates = [candidate('a')]; await f.save();
   const r = { ...request, requestId: 'shared' };
   const code = `import {route} from ${JSON.stringify(new URL('../dist/index.js', import.meta.url).href)};console.log((await route(${JSON.stringify(r)},{configPath:process.argv[1]})).id)`;
   const rows = await Promise.all(Array.from({ length: 5 }, () => exec(process.execPath, ['--input-type=module', '-e', code, f.path])));
   assert.equal(new Set(rows.map(r => r.stdout.trim())).size, 1);
+  const store = new Store(f.config);
+  try { assert.equal(store.active().get('codex'), 1); } finally { store.close(); }
 });
 test('audit excludes raw task and secrets; state and credentials permissions are private', async t => {
   const f = await fixture(t), secret = 'SYNTHETIC-DO-NOT-PERSIST';

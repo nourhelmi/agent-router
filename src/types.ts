@@ -30,7 +30,6 @@ export interface Candidate {
 export interface Pool {
   id: string;
   reservePercent: number;
-  maxConcurrent: number;
   unknown: 'allow' | 'penalize' | 'exclude';
   /** User assertion: this collector observes the account used by this pool's workers. */
   collector?: {
@@ -111,6 +110,7 @@ export interface CandidateDiagnostic {
   reasons: string[];
   quota: 'known' | 'unknown';
   headroom?: number;
+  /** Informational live lease count; never an eligibility or scoring input. */
   active: number;
   benchmark?: number;
   benchmarkEvidence: BenchmarkObservation[];

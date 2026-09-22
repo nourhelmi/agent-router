@@ -16,7 +16,6 @@ export function evaluate(config: Config, request: RouteRequest, quotas: Map<stri
       (candidate.model.startsWith('openai-codex/') && candidate.thinking === 'max'))) hard.push('native-capability');
     if (request.pin && (candidate.model !== request.pin.model || (request.pin.thinking && candidate.thinking !== request.pin.thinking))) hard.push('pin');
     const count = active.get(pool.id) ?? 0;
-    if (count >= pool.maxConcurrent) hard.push('concurrency');
     const cached = quotas.get(pool.id);
     const snapshot = cached && matchesBinding(pool, cached) ? cached : undefined;
     if (cached && !snapshot) reasons.push('quota-binding-changed');
@@ -45,7 +44,7 @@ export function evaluate(config: Config, request: RouteRequest, quotas: Map<stri
     const fit = accepted ? score.score : candidate.prior;
     const quality = benchmark.score === undefined ? fit : fit * (1 - config.policy.benchmarkWeight) + benchmark.score * config.policy.benchmarkWeight;
     // Unknown capacity gets neutral utility, never fabricated observed headroom.
-    const capacity = (headroom === undefined ? 0.5 : Math.max(0, headroom) / 100) * (1 - count / pool.maxConcurrent);
+    const capacity = headroom === undefined ? 0.5 : Math.max(0, headroom) / 100;
     const utility = quality * (1 - config.policy.capacityWeight) + capacity * config.policy.capacityWeight -
       (!known && pool.unknown === 'penalize' ? config.policy.unknownPenalty : 0);
     return { id: candidate.id, eligible: !hard.length, reasons: [...hard, ...reasons], quota: known ? 'known' : 'unknown',

@@ -125,8 +125,7 @@ export function parseConfig(value: unknown): Config {
   const pools = new Set<string>();
   for (const raw of c.pools) {
     const p = object(raw); text(p.id); check(!pools.has(p.id), 'Duplicate pool'); pools.add(p.id);
-    number(p.reservePercent, 0, 100); number(p.maxConcurrent, 1, 1000);
-    check(Number.isInteger(p.maxConcurrent), 'Concurrency must be integer');
+    number(p.reservePercent, 0, 100);
     check(['allow', 'penalize', 'exclude'].includes(p.unknown), 'Unknown quota policy required');
     if (p.collector !== undefined) {
       const s = object(p.collector);
@@ -173,9 +172,9 @@ export function initialConfig(path = defaultConfigPath()): Config {
     version: 1, enabled: true, modulePath: fileURLToPath(new URL('./index.js', import.meta.url)),
     stateDir: join(home, 'state'), credentialsFile: join(home, 'credentials.json'), benchmarkFile: join(home, 'benchmarks.json'), candidates: [],
     pools: [
-      { id: 'codex', reservePercent: 10, maxConcurrent: 3, unknown: 'penalize' },
-      { id: 'claude', reservePercent: 10, maxConcurrent: 3, unknown: 'penalize' },
-      { id: 'cursor', reservePercent: 10, maxConcurrent: 2, unknown: 'exclude' },
+      { id: 'codex', reservePercent: 10, unknown: 'penalize' },
+      { id: 'claude', reservePercent: 10, unknown: 'penalize' },
+      { id: 'cursor', reservePercent: 10, unknown: 'exclude' },
     ],
     policy: { quotaMaxAgeMs: 300000, refreshCooldownMs: 60000, refreshTimeoutMs: 20000, leaseMs: 300000,
       benchmarkMaxAgeMs: 90 * 86400000, benchmarkWeight: 0.15, capacityWeight: 0.2, unknownPenalty: 0.2 },

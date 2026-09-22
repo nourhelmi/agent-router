@@ -26,7 +26,7 @@ export async function route(input: RouteRequest, options: RouteOptions = {}): Pr
     return prior.decision;
   };
   const noRoute = (diagnostics: ReturnType<typeof evaluate>): never => {
-    const error = new RouterError('AGENT_ROUTER_NO_FEASIBLE_ROUTE', 'No candidate satisfies identity, capability, quota, and concurrency constraints');
+    const error = new RouterError('AGENT_ROUTER_NO_FEASIBLE_ROUTE', 'No candidate satisfies identity, capability, and quota constraints');
     Object.assign(error, { candidates: diagnostics });
     throw error;
   };
@@ -79,7 +79,7 @@ export async function renew(decisionId: string, options: Pick<RouteOptions, 'con
   const config = await loadConfig(options.configPath), store = new Store(config);
   try {
     store.transaction(() => {
-      // Sample time only after acquiring the writer lock: a waiting renewal must not resurrect an expired slot.
+      // Sample time only after acquiring the writer lock: a waiting renewal must not resurrect an expired lease.
       const now = Date.now(), expires = now + config.policy.leaseMs;
       const result = store.db.prepare("UPDATE decisions SET expires=?,data=json_set(data,'$.expiresAt',?) WHERE id=? AND released=0 AND expires>?")
         .run(expires, new Date(expires).toISOString(), decisionId, now);

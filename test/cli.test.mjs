@@ -20,6 +20,7 @@ test('CLI initialization imports union, preserves ACTIVE as tie-break only, refu
   const result = JSON.parse((await exec(process.execPath, args)).stdout); assert.equal(result.candidates, 1);
   const config = JSON.parse(await readFile(path, 'utf8'));
   assert.equal(config.pools[0].collector.source, 'app-server'); assert.equal(config.pools[1].collector, undefined);
+  assert.ok(config.pools.every(pool => !Object.hasOwn(pool, 'maxConcurrent')));
   assert.equal(config.benchmarkFile, join(f.dir, 'benchmarks.json'));
   const before = await readFile(path, 'utf8'); await assert.rejects(exec(process.execPath, args)); assert.equal(await readFile(path, 'utf8'), before);
 });
