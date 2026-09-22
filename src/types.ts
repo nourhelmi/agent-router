@@ -35,7 +35,7 @@ export interface Pool {
   /** User assertion: this collector observes the account used by this pool's workers. */
   collector?: {
     provider: 'codex' | 'claude';
-    source: 'cli' | 'oauth';
+    source: 'cli' | 'oauth' | 'app-server';
     command: string;
     account?: string;
     /** Empty list explicitly marks a window irrelevant to this catalog. */
@@ -48,6 +48,8 @@ export interface Config {
   modulePath: string;
   stateDir: string;
   credentialsFile: string;
+  /** Private, manually refreshed observations. No network fetch during routing. */
+  benchmarkFile?: string;
   candidates: Candidate[];
   pools: Pool[];
   policy: {
@@ -70,6 +72,12 @@ export interface QuotaWindow {
   windowMinutes?: number;
   models?: string[];
 }
+export interface QuotaGate {
+  id: string;
+  allowed: boolean | null;
+  observedAt: string;
+  models?: string[];
+}
 export interface QuotaSnapshot {
   version: 1;
   pool: string;
@@ -77,6 +85,8 @@ export interface QuotaSnapshot {
   observedAt: string;
   binding?: string;
   windows: QuotaWindow[];
+  /** Explicit provider permissions; null must not clear a previous denial. */
+  gates?: QuotaGate[];
   warnings: string[];
 }
 export interface BenchmarkObservation extends BenchmarkRef {

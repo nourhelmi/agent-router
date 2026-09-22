@@ -21,14 +21,17 @@ export function evaluate(config: Config, request: RouteRequest, quotas: Map<stri
     const snapshot = cached && matchesBinding(pool, cached) ? cached : undefined;
     if (cached && !snapshot) reasons.push('quota-binding-changed');
     const windows = snapshot?.windows.filter(w => !w.models || w.models.includes(candidate.model)) ?? [];
+    const gates = snapshot?.gates?.filter(g => !g.models || g.models.includes(candidate.model)) ?? [];
+    for (const g of gates) if (g.allowed === false) hard.push(`provider-denied:${g.id}`);
+    const permissionUnknown = gates.some(g => g.allowed === null);
     const unexpired = windows.filter(w => !w.resetAt || Date.parse(w.resetAt) > now);
     const isFresh = snapshot && now - Date.parse(snapshot.observedAt) <= config.policy.quotaMaxAgeMs;
-    const known = Boolean(isFresh && windows.length && windows.length === unexpired.length && windows.every(w => w.known !== false));
+    const known = Boolean(isFresh && !permissionUnknown && windows.length && windows.length === unexpired.length && windows.every(w => w.known !== false));
     // A still-unexpired exhaustion report remains a hard restriction even if another window expired.
     const restricted = unexpired.filter(w => w.known !== false && 100 - w.usedPercent <= pool.reservePercent);
     if (restricted.length) hard.push(...restricted.map(w => `reserve:${w.id}`));
     if (!known) {
-      reasons.push(!snapshot ? 'quota-missing' : !isFresh ? 'quota-stale' : windows.some(w => w.known === false) ? 'quota-usage-unknown' : windows.length ? 'quota-reset-unobserved' : 'quota-no-applicable-windows');
+      reasons.push(!snapshot ? 'quota-missing' : !isFresh ? 'quota-stale' : permissionUnknown ? 'quota-permission-unknown' : windows.some(w => w.known === false) ? 'quota-usage-unknown' : windows.length ? 'quota-reset-unobserved' : 'quota-no-applicable-windows');
       if (pool.unknown === 'exclude') hard.push('unknown-quota-excluded');
     }
     if (snapshot) reasons.push(...snapshot.warnings);

@@ -15,7 +15,7 @@ export interface Judgment {
   family?: 'coding' | 'general';
   scores: Map<string, FitScore>;
 }
-export async function responseJson(response: Response, maxBytes = 2_000_000): Promise<unknown> {
+export async function responseText(response: Response, maxBytes = 2_000_000): Promise<string> {
   check(response.body, 'Missing response body');
   const reader = response.body.getReader(), chunks: Uint8Array[] = [];
   let size = 0;
@@ -25,8 +25,11 @@ export async function responseJson(response: Response, maxBytes = 2_000_000): Pr
       if (done) break;
       size += value.byteLength; check(size <= maxBytes, 'Response body too large'); chunks.push(value);
     }
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return Buffer.concat(chunks).toString('utf8');
   } finally { await reader.cancel().catch(() => {}); }
+}
+export async function responseJson(response: Response, maxBytes = 2_000_000): Promise<unknown> {
+  return JSON.parse(await responseText(response, maxBytes));
 }
 function distribution(raw: unknown, keys: string[]): Record<string, number> {
   const p = object(raw);

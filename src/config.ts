@@ -75,6 +75,16 @@ export function quotaSnapshot(value: unknown): QuotaSnapshot {
   check(Date.parse(v.observedAt) <= Date.now() + 60000, 'Quota observation is in the future');
   check(Array.isArray(v.windows) && v.windows.length <= 100, 'Invalid quota windows');
   strings(v.warnings);
+  if (v.gates !== undefined) {
+    check(Array.isArray(v.gates) && v.gates.length <= 100, 'Invalid quota gates');
+    const gates = new Set<string>();
+    for (const raw of v.gates) {
+      const g = object(raw); text(g.id); check(!gates.has(g.id), 'Duplicate quota gate'); gates.add(g.id);
+      check(g.allowed === null || typeof g.allowed === 'boolean', 'Invalid provider permission');
+      timestamp(g.observedAt); check(Date.parse(g.observedAt) <= Date.parse(v.observedAt), 'Permission newer than snapshot');
+      if (g.models !== undefined) strings(g.models);
+    }
+  }
   const ids = new Set<string>();
   for (const entry of v.windows) {
     const w = object(entry);
@@ -110,6 +120,7 @@ export function parseConfig(value: unknown): Config {
   for (const field of ['modulePath', 'stateDir', 'credentialsFile']) {
     text(c[field]); check(isAbsolute(c[field]), `${field} must be absolute`);
   }
+  if (c.benchmarkFile !== undefined) { text(c.benchmarkFile); check(isAbsolute(c.benchmarkFile), 'benchmarkFile must be absolute'); }
   check(Array.isArray(c.pools) && c.pools.length > 0 && c.pools.length <= 100, 'Invalid quota pools');
   const pools = new Set<string>();
   for (const raw of c.pools) {
@@ -119,7 +130,8 @@ export function parseConfig(value: unknown): Config {
     check(['allow', 'penalize', 'exclude'].includes(p.unknown), 'Unknown quota policy required');
     if (p.collector !== undefined) {
       const s = object(p.collector);
-      check(['codex', 'claude'].includes(s.provider) && ['cli', 'oauth'].includes(s.source), 'Only explicit CodexBar CLI/OAuth sources supported');
+      check(['codex', 'claude'].includes(s.provider) && ['cli', 'oauth', 'app-server'].includes(s.source), 'Only explicit CLI/OAuth/app-server collectors supported');
+      if (s.source === 'app-server') check(s.provider === 'codex' && s.account === undefined, 'App-server uses the active Codex CLI account; account selection is not supported');
       text(s.command);
       if (s.account !== undefined) text(s.account);
       for (const models of Object.values(object(s.windowModels))) strings(models);
@@ -159,7 +171,7 @@ export function initialConfig(path = defaultConfigPath()): Config {
   const home = dirname(resolve(path));
   return {
     version: 1, enabled: true, modulePath: fileURLToPath(new URL('./index.js', import.meta.url)),
-    stateDir: join(home, 'state'), credentialsFile: join(home, 'credentials.json'), candidates: [],
+    stateDir: join(home, 'state'), credentialsFile: join(home, 'credentials.json'), benchmarkFile: join(home, 'benchmarks.json'), candidates: [],
     pools: [
       { id: 'codex', reservePercent: 10, maxConcurrent: 3, unknown: 'penalize' },
       { id: 'claude', reservePercent: 10, maxConcurrent: 3, unknown: 'penalize' },

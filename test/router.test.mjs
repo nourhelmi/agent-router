@@ -35,7 +35,7 @@ test('multi-window reserve, expired window cannot erase unexpired weekly exhaust
 });
 test('unknown/stale/reset quotas obey explicit policy and never report fresh zero', async t => {
   const f = await fixture(t); f.config.candidates = [candidate('a')]; f.config.pools[0].unknown = 'exclude'; await f.save();
-  const store = new Store(f.config); store.db.prepare('DELETE FROM quota').run(); store.close();
+  const store = new Store(f.config); store.db.prepare('DELETE FROM quota_cache').run(); store.close();
   await assert.rejects(route(request, f.options), noRoute);
   f.config.pools[0].unknown = 'penalize'; await f.save();
   const d = await route(request, f.options); assert.equal(d.candidates[0].quota, 'unknown'); assert.equal(d.candidates[0].headroom, undefined);

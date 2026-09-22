@@ -1,9 +1,10 @@
-import { benchmarks, check, credential, object, text, timestamp } from './config.js';
-import { responseJson } from './jev.js';
+import { benchmarks, check, credential, object, readJson, text, timestamp } from './config.js';
+import { responseJson, responseText } from './jev.js';
 import type { BenchmarkObservation, Candidate, Config } from './types.js';
 
 export const DEEPSWE_URL = 'https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json';
 export const AA_URL = 'https://artificialanalysis.ai/api/v2/language/models/free';
+export const AA_PAGE_URL = 'https://artificialanalysis.ai/models';
 export function parseDeepSWE(raw: unknown): BenchmarkObservation[] {
   const data = object(raw); check(Array.isArray(data.rows), 'Invalid DeepSWE rows');
   timestamp(data.generated_at); text(data.unit); check(data.n_tasks_in_set === 113, 'DeepSWE task set changed; review adapter');
@@ -38,13 +39,44 @@ export function parseArtificialAnalysis(raw: unknown, observedAt = new Date().to
       }));
   }));
 }
-export async function fetchBenchmarks(source: 'deepswe' | 'artificial-analysis', config: Config): Promise<BenchmarkObservation[]> {
+/** Read the page's published JSON-LD, not React internals or an authenticated API. */
+export function parseArtificialAnalysisPage(html: string, observedAt = new Date().toISOString()): BenchmarkObservation[] {
+  check(Buffer.byteLength(html) <= 8_000_000, 'Benchmark page too large');
+  const versions = new Set([...html.matchAll(/Artificial Analysis Intelligence Index v(\d+(?:\.\d+)+)\b/g)].map(m => m[1]));
+  check(versions.size === 1, 'AA page methodology missing or ambiguous; review adapter');
+  const datasets = [...html.matchAll(/<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
+    .map(m => object(JSON.parse(m[1]!))).filter(d => d['@type'] === 'Dataset' && d.name === 'Artificial Analysis Intelligence Index');
+  check(datasets.length === 1 && Array.isArray(datasets[0]!.data), 'AA canonical page dataset changed; review adapter');
+  return benchmarks(datasets[0]!.data.flatMap((item: unknown) => {
+    const row = object(item); if (row.intelligenceIndex == null) return [];
+    text(row.label); text(row.detailsUrl);
+    const url = new URL(row.detailsUrl, AA_PAGE_URL);
+    check(url.origin === new URL(AA_PAGE_URL).origin && /^\/models\/[a-z0-9-]+$/.test(url.pathname) && !url.username && !url.password, 'Invalid AA model URL');
+    return [{ source: 'artificial-analysis', model: url.pathname.slice('/models/'.length), variant: row.label,
+      metric: 'artificial_analysis_intelligence_index', cohort: `page-index-v${[...versions][0]}`, value: row.intelligenceIndex,
+      higherIsBetter: true, observedAt, sourceUrl: url.href,
+      methodology: `Artificial Analysis Intelligence Index v${[...versions][0]}; public models-page chart selection, not the full catalog. Exact displayed variant. Capture time; evaluation date unspecified. Private snapshot, not licensed for redistribution.` }];
+  }));
+}
+export async function readBenchmarkFile(config: Config): Promise<BenchmarkObservation[] | undefined> {
+  if (!config.benchmarkFile) return;
+  try {
+    const rows = benchmarks(await readJson(config.benchmarkFile));
+    check(rows.length > 0, 'Empty benchmark snapshot; existing cached evidence preserved'); return rows;
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+}
+export async function fetchBenchmarks(source: 'deepswe' | 'artificial-analysis', config: Config, api = false): Promise<BenchmarkObservation[]> {
   if (source === 'deepswe') {
     const response = await fetch(DEEPSWE_URL, { signal: AbortSignal.timeout(20000), redirect: 'error' });
     check(response.ok, `DeepSWE returned HTTP ${response.status}`);
     return parseDeepSWE(await responseJson(response, 8_000_000));
   }
-  const key = await credential(config, 'artificialAnalysis'); check(key, 'ARTIFICIAL_ANALYSIS_API_KEY required; no public data API');
+  if (!api) {
+    const response = await fetch(AA_PAGE_URL, { signal: AbortSignal.timeout(20000), redirect: 'error' });
+    check(response.ok, `Artificial Analysis page returned HTTP ${response.status}`);
+    return parseArtificialAnalysisPage(await responseText(response, 8_000_000));
+  }
+  const key = await credential(config, 'artificialAnalysis'); check(key, 'ARTIFICIAL_ANALYSIS_API_KEY required for --api; page snapshots need no key');
   const rows: BenchmarkObservation[] = [];
   let version: number | undefined;
   for (let page = 1; page <= 30; page++) {

@@ -4,3 +4,5 @@ dist/
 .env*
 *.sqlite*
 coverage/
+# Private benchmark snapshots, not redistributed with the package.
+data/

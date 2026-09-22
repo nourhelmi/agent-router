@@ -3,12 +3,13 @@ import { check, loadConfig, text, validateRequest } from './config.js';
 import { evaluate, ranked } from './engine.js';
 import { judge, type Judgment } from './jev.js';
 import { refreshQuotas } from './quota.js';
+import { readBenchmarkFile } from './benchmarks.js';
 import { Store } from './store.js';
 import { RouterError, type RouteDecision, type RouteOptions, type RouteRequest } from './types.js';
 
 export * from './types.js';
-export { parseCodexBar, parseClaudeStatusline, quotaBinding } from './quota.js';
-export { parseDeepSWE, parseArtificialAnalysis } from './benchmarks.js';
+export { parseCodexBar, parseCodexRateLimits, parseClaudeStatusline, quotaBinding } from './quota.js';
+export { parseDeepSWE, parseArtificialAnalysis, parseArtificialAnalysisPage } from './benchmarks.js';
 
 export async function route(input: RouteRequest, options: RouteOptions = {}): Promise<RouteDecision> {
   const request = validateRequest(input), config = await loadConfig(options.configPath);
@@ -32,6 +33,8 @@ export async function route(input: RouteRequest, options: RouteOptions = {}): Pr
   try {
     const prior = previous(); if (prior) return prior;
     await refreshQuotas(config, store);
+    const snapshot = await readBenchmarkFile(config);
+    if (snapshot) store.putEvidence(snapshot);
     const evidence = store.evidence();
     const first = evaluate(config, request, store.quotas(), store.active(), evidence);
     const eligible = config.candidates.filter(c => first.some(d => d.id === c.id && d.eligible));

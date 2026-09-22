@@ -5,14 +5,14 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { defaultConfigPath, initialConfig, loadConfig, parseConfig, privateJson, readJson, check, object, benchmarks, quotaSnapshot } from './config.js';
 import { importProfiles } from './profiles.js';
-import { fetchBenchmarks } from './benchmarks.js';
+import { fetchBenchmarks, readBenchmarkFile } from './benchmarks.js';
 import { parseClaudeStatusline, parseCodexBar, quotaBinding, refreshQuotas } from './quota.js';
 import { route, release, renew } from './index.js';
 import { Store } from './store.js';
 import { RouterError, type RouteRequest, type BenchmarkSource } from './types.js';
 
 const help = `agent-router commands (JSON on stdout; local state is private):
-  init [--profiles DIR] [--codexbar] [--config FILE]   create config; never overwrite
+  init [--profiles DIR] [--codex | --codexbar] [--config FILE]   create config; never overwrite
   route --file REQUEST.json [--dry-run]              --file - reads stdin
   release ID | renew ID
   status                                             quotas, leases, evidence coverage
@@ -20,8 +20,9 @@ const help = `agent-router commands (JSON on stdout; local state is private):
   quota ingest --file SNAPSHOT.json
   quota codexbar --pool ID --file DATA.json            normalize existing JSON, preserve timestamp
   quota statusline --pool ID                          read fresh Claude statusline stdin, no stdout
-  benchmarks refresh --source deepswe|artificial-analysis
+  benchmarks refresh --source deepswe|artificial-analysis [--api]
   benchmarks import --file OBSERVATIONS.json
+  benchmarks export [--file JSON]                     private snapshot, never publish
   benchmarks list
   benchmarks map --candidate ID --source SOURCE --model SOURCE_MODEL
     --variant VARIANT --metric METRIC --cohort COHORT --evidence-url HTTPS_URL
@@ -36,7 +37,7 @@ async function stdinJson(): Promise<unknown> {
 }
 async function main(): Promise<void> {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
-    config: { type: 'string' }, profiles: { type: 'string' }, codexbar: { type: 'boolean' },
+    config: { type: 'string' }, profiles: { type: 'string' }, codexbar: { type: 'boolean' }, codex: { type: 'boolean' }, api: { type: 'boolean' },
     file: { type: 'string' }, pool: { type: 'string' }, source: { type: 'string' },
     candidate: { type: 'string' }, model: { type: 'string' }, variant: { type: 'string' }, metric: { type: 'string' },
     cohort: { type: 'string' }, 'evidence-url': { type: 'string' }, 'dry-run': { type: 'boolean' }, help: { type: 'boolean' },
@@ -48,7 +49,9 @@ async function main(): Promise<void> {
   if (command === 'init') {
     try { await access(path); throw new RouterError('CONFIG_EXISTS', 'Config already exists; refusing to overwrite'); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    check(!(values.codex && values.codexbar), 'Choose --codex or --codexbar');
     const config = initialConfig(path);
+    if (values.codex) config.pools.find(p => p.id === 'codex')!.collector = { provider: 'codex', source: 'app-server', command: 'codex', windowModels: {} };
     config.candidates = await importProfiles(values.profiles || join(homedir(), '.pi', 'agent', 'intelligence-profiles'));
     check(config.candidates.length, 'No profile candidates found');
     if (values.codexbar) for (const pool of config.pools) {
@@ -76,6 +79,9 @@ async function main(): Promise<void> {
   }
   const store = new Store(config);
   try {
+    if (command === 'benchmarks' || command === 'status') {
+      const rows = await readBenchmarkFile(config); if (rows) store.putEvidence(rows);
+    }
     if (command === 'status') {
       output({ version: 1, enabled: config.enabled, quotas: [...store.quotas().values()], active: Object.fromEntries(store.active()), refresh: store.refreshStatus(),
         benchmarks: { observations: store.evidence().length, candidates: config.candidates.map(c => ({ id: c.id, mapped: c.benchmarks.length })) } }); return;
@@ -99,6 +105,11 @@ async function main(): Promise<void> {
     }
     if (command === 'benchmarks') {
       if (sub === 'list') { output(store.evidence()); return; }
+      if (sub === 'export') {
+        const destination = values.file ? resolve(values.file) : config.benchmarkFile, rows = store.evidence();
+        check(destination && rows.length > 0, 'Snapshot destination and nonempty evidence required');
+        await privateJson(destination, rows); output({ file: destination, observations: rows.length }); return;
+      }
       if (sub === 'map') {
         const candidate = config.candidates.find(c => c.id === values.candidate); check(candidate, 'Unknown candidate');
         const row = store.evidence().find(o => o.source === values.source && o.model === values.model && o.variant === values.variant && o.metric === values.metric && o.cohort === values.cohort);
@@ -114,12 +125,17 @@ async function main(): Promise<void> {
       if (sub === 'import') observations = benchmarks(await input());
       else {
         check(sub === 'refresh' && ['deepswe', 'artificial-analysis'].includes(values.source || ''), 'Unknown benchmark source/command');
-        observations = await fetchBenchmarks(values.source as BenchmarkSource, config);
+        check(!values.file, 'Set benchmarkFile for refresh output; use benchmarks export --file for copies');
+        observations = await fetchBenchmarks(values.source as BenchmarkSource, config, values.api);
       }
       check(observations.length > 0, 'No benchmark observations; existing evidence preserved');
       const sources = new Set(observations.map(o => o.source));
-      store.putEvidence([...store.evidence().filter(o => !sources.has(o.source)), ...observations]);
-      output({ stored: observations.length, sources: [...sources] }); return;
+      const merged = benchmarks([...store.evidence().filter(o => !sources.has(o.source)), ...observations]);
+      const destination = config.benchmarkFile;
+      // ponytail: one manual snapshot updater; add a file lock if concurrent automated refreshes are introduced.
+      if (destination) await privateJson(destination, merged);
+      store.putEvidence(merged);
+      output({ stored: observations.length, sources: [...sources], ...(destination ? { file: destination } : {}) }); return;
     }
     throw new RouterError('UNKNOWN_COMMAND', 'Unknown command; use --help');
   } finally { store.close(); }
