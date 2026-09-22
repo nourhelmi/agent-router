@@ -1,0 +1,19 @@
+{
+  "name": "@nourhelmi/agent-router",
+  "version": "0.1.0",
+  "description": "Authoritative task-fit routing with Jev, quota constraints, and provenance-aware benchmarks",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "bin": { "agent-router": "./dist/cli.js" },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": { "@types/node": "^24.0.0", "typescript": "~5.9.3" },
+  "repository": { "type": "git", "url": "git+https://github.com/nourhelmi/agent-router.git" },
+  "license": "MIT"
+}
