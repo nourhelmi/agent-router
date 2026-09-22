@@ -13,7 +13,7 @@ test('CLI initialization imports union, preserves ACTIVE as tie-break only, refu
   const guide = { name: 'one', models: { 'openai-codex/synthetic': { character: 'Synthetic worker' } }, recommendations: { builder: [{ model: 'openai-codex/synthetic', thinking: 'high', fit: 'Synthetic scoped implementation' }] } };
   await writeFile(join(profiles, 'one.json'), JSON.stringify(guide)); await writeFile(join(profiles, 'ACTIVE'), 'two');
   await writeFile(join(profiles, 'two.json'), JSON.stringify({ ...guide, name: 'two', recommendations: { checker: guide.recommendations.builder } }));
-  const candidates = await importProfiles(profiles); assert.equal(candidates.length, 1); assert.deepEqual(candidates[0].roles.sort(), ['builder','checker']);
+  const candidates = await importProfiles(profiles); assert.equal(candidates.length, 1); assert.deepEqual(candidates[0].roles.sort(), ['advisor','builder','checker']);
   assert.equal(candidates[0].rank, 0); assert.equal(candidates[0].benchmarks.length, 0);
   const path = join(f.dir, 'new-config.json');
   const args = [cli, 'init', '--profiles', profiles, '--config', path];
