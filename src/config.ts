@@ -109,7 +109,8 @@ export function validateRequest(value: unknown): RouteRequest {
     text(pin.model, 256);
     if (pin.thinking !== undefined) check(thinkingLevels.includes(pin.thinking), 'Invalid reasoning effort');
   }
-  return v as RouteRequest;
+  // Capture the validated packet before routing awaits config, quotas or semantic judgments.
+  return { ...v, ...(v.pin !== undefined ? { pin: { ...v.pin } } : {}) } as RouteRequest;
 }
 export async function loadConfig(path = defaultConfigPath()): Promise<Config> {
   return parseConfig(await readJson(path));
@@ -143,6 +144,7 @@ export function parseConfig(value: unknown): Config {
     text(v.id); check(!ids.has(v.id), 'Duplicate candidate'); ids.add(v.id);
     text(v.model, 256); check(v.model.includes('/'), 'Model must include provider');
     check(thinkingLevels.includes(v.thinking), 'Invalid reasoning effort');
+    if (v.taskScope !== undefined) check(v.taskScope === 'small-or-verification', 'Invalid candidate task scope');
     strings(v.roles); strings(v.harnesses); strings(v.profiles);
     check(v.roles.length > 0 && v.harnesses.length > 0 && v.harnesses.every((h: string) => ['pi', 'native'].includes(h)), 'Invalid candidate capabilities');
     check(pools.has(v.pool), 'Candidate references unknown quota pool');

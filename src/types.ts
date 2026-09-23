@@ -25,6 +25,8 @@ export interface Candidate {
   roleRanks?: Record<string, number>;
   enabled: boolean;
   profiles: string[];
+  /** Requires a fresh semantic scope judgment; pins and fallback cannot bypass it. */
+  taskScope?: 'small-or-verification';
   benchmarks: BenchmarkMapping[];
 }
 export interface Pool {
@@ -104,6 +106,7 @@ export interface RouteRequest {
   requestId?: string;
 }
 export interface RouteOptions { configPath?: string; dryRun?: boolean }
+export interface TaskScopeAssessment { small: number; verification: number }
 export interface CandidateDiagnostic {
   id: string;
   eligible: boolean;
@@ -117,6 +120,7 @@ export interface CandidateDiagnostic {
   score?: number;
   confidence?: number;
   probabilities?: Record<string, number>;
+  taskScope?: TaskScopeAssessment;
   utility?: number;
 }
 export interface RouteDecision {

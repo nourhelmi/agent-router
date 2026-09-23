@@ -3,7 +3,7 @@ import type { Judgment } from './jev.js';
 import { benchmarkScore } from './benchmarks.js';
 import { matchesBinding } from './quota.js';
 
-export function evaluate(config: Config, request: RouteRequest, quotas: Map<string, QuotaSnapshot>, active: Map<string, number>, evidence: BenchmarkObservation[], judgment?: Judgment, now = Date.now()): CandidateDiagnostic[] {
+export function evaluate(config: Config, request: RouteRequest, quotas: Map<string, QuotaSnapshot>, active: Map<string, number>, evidence: BenchmarkObservation[], judgment?: Judgment, now = Date.now(), phase: 'assessment' | 'admission' = 'admission'): CandidateDiagnostic[] {
   const role = ['worker', 'freeform'].includes(request.role) ? 'builder' : request.role;
   return config.candidates.map(candidate => {
     const pool = config.pools.find(p => p.id === candidate.pool)!;
@@ -15,6 +15,10 @@ export function evaluate(config: Config, request: RouteRequest, quotas: Map<stri
     if (request.harness === 'native' && (!/^(openai-codex|anthropic|claude-bridge)\//.test(candidate.model) ||
       (candidate.model.startsWith('openai-codex/') && candidate.thinking === 'max'))) hard.push('native-capability');
     if (request.pin && (candidate.model !== request.pin.model || (request.pin.thinking && candidate.thinking !== request.pin.thinking))) hard.push('pin');
+    // Assessment only builds the Jev shortlist. Every actual admission requires positive scope evidence.
+    const taskScope = candidate.taskScope ? judgment?.taskScope : undefined;
+    if (candidate.taskScope && phase === 'admission' &&
+      !(taskScope && Math.max(taskScope.small, taskScope.verification) >= 0.9)) hard.push('task-scope-unconfirmed');
     const count = active.get(pool.id) ?? 0;
     const cached = quotas.get(pool.id);
     const snapshot = cached && matchesBinding(pool, cached) ? cached : undefined;
@@ -49,6 +53,7 @@ export function evaluate(config: Config, request: RouteRequest, quotas: Map<stri
       (!known && pool.unknown === 'penalize' ? config.policy.unknownPenalty : 0);
     return { id: candidate.id, eligible: !hard.length, reasons: [...hard, ...reasons], quota: known ? 'known' : 'unknown',
       ...(headroom !== undefined ? { headroom } : {}), active: count,
+      ...(taskScope ? { taskScope } : {}),
       benchmark: benchmark.score, benchmarkEvidence: benchmark.evidence, ...score, utility };
   });
 }

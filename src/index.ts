@@ -26,7 +26,7 @@ export async function route(input: RouteRequest, options: RouteOptions = {}): Pr
     return prior.decision;
   };
   const noRoute = (diagnostics: ReturnType<typeof evaluate>): never => {
-    const error = new RouterError('AGENT_ROUTER_NO_FEASIBLE_ROUTE', 'No candidate satisfies identity, capability, and quota constraints');
+    const error = new RouterError('AGENT_ROUTER_NO_FEASIBLE_ROUTE', 'No candidate satisfies identity, capability, task-scope, and quota constraints');
     Object.assign(error, { candidates: diagnostics });
     throw error;
   };
@@ -36,13 +36,14 @@ export async function route(input: RouteRequest, options: RouteOptions = {}): Pr
     const snapshot = await readBenchmarkFile(config);
     if (snapshot) store.putEvidence(snapshot);
     const evidence = store.evidence();
-    const first = evaluate(config, request, store.quotas(), store.active(), evidence);
+    const first = evaluate(config, request, store.quotas(), store.active(), evidence, undefined, Date.now(), 'assessment');
     const eligible = config.candidates.filter(c => first.some(d => d.id === c.id && d.eligible));
     if (!eligible.length) {
       const concurrent = previous(); if (concurrent) return concurrent;
       noRoute(first);
     }
-    const judgment: Judgment = request.pin ? { reason: 'explicit-pin', scores: new Map() } : await judge(request, eligible, config);
+    const judgment: Judgment = request.pin && !eligible.some(c => c.taskScope)
+      ? { reason: 'explicit-pin', scores: new Map() } : await judge(request, eligible, config);
     // No network await while holding the shared writer transaction.
     return store.transaction(() => {
       const previousDecision = previous(); if (previousDecision) return previousDecision;
