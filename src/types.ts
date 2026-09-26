@@ -36,7 +36,8 @@ export interface Pool {
   /** User assertion: this collector observes the account used by this pool's workers. */
   collector?: {
     provider: 'codex' | 'claude';
-    source: 'cli' | 'oauth' | 'app-server';
+    /** `web` reads CodexBar's cached web session: ~2s, versus ~30s for Claude's CLI probe. */
+    source: 'cli' | 'oauth' | 'web' | 'app-server';
     command: string;
     account?: string;
     /** Empty list explicitly marks a window irrelevant to this catalog. */

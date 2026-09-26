@@ -77,7 +77,10 @@ export function parseCodexBar(raw: unknown, pool: Pool): QuotaSnapshot {
   check(!row.error, 'CodexBar provider unavailable');
   if (pool.collector.account) check(row.account === pool.collector.account, 'CodexBar account binding mismatch');
   const source = pool.collector.source;
-  check(source === 'oauth' ? row.source === 'oauth' : ['cli', 'codex-cli', 'claude-cli'].includes(row.source), 'Unexpected CodexBar source');
+  // oauth/web rows carry their source verbatim; CLI rows say `cli`, `<provider>-cli`, or (Claude) the provider name.
+  const provider = pool.collector.provider;
+  const accepted = source === 'oauth' || source === 'web' ? [source] : ['cli', `${provider}-cli`, provider];
+  check(accepted.includes(row.source), 'Unexpected CodexBar source');
   const usage = object(row.usage), warnings: string[] = [], windows: QuotaWindow[] = [];
   const add = (id: string, rawWindow: unknown, scoped: boolean, usageKnown = true) => {
     if (rawWindow === null || rawWindow === undefined) return;

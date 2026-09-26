@@ -130,7 +130,7 @@ export function parseConfig(value: unknown): Config {
     check(['allow', 'penalize', 'exclude'].includes(p.unknown), 'Unknown quota policy required');
     if (p.collector !== undefined) {
       const s = object(p.collector);
-      check(['codex', 'claude'].includes(s.provider) && ['cli', 'oauth', 'app-server'].includes(s.source), 'Only explicit CLI/OAuth/app-server collectors supported');
+      check(['codex', 'claude'].includes(s.provider) && ['cli', 'oauth', 'web', 'app-server'].includes(s.source), 'Only explicit CLI/OAuth/web/app-server collectors supported');
       if (s.source === 'app-server') check(s.provider === 'codex' && s.account === undefined, 'App-server uses the active Codex CLI account; account selection is not supported');
       text(s.command);
       if (s.account !== undefined) text(s.account);

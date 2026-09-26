@@ -77,6 +77,20 @@ test('CodexBar preserves timestamps, ignores personal data, parses absent and na
   row.usage.extraRateWindows[0].usageKnown = false;
   const unknown = parseCodexBar(row, pool); assert.equal(unknown.windows.length, 2); assert.equal(unknown.windows[1].known, false);
 });
+test('CodexBar Claude CLI rows labelled with the provider name are accepted', () => {
+  const pool = { id: 'claude', collector: { provider: 'claude', source: 'cli', windowModels: {} } };
+  const row = { provider: 'claude', source: 'claude', usage: { updatedAt: new Date().toISOString(),
+    primary: { usedPercent: 3, windowMinutes: 300 }, secondary: { usedPercent: 0, windowMinutes: 10080 } } };
+  const q = parseCodexBar([row], pool);
+  assert.equal(q.windows.length, 2); assert.equal(q.source, 'codexbar:claude');
+  assert.throws(() => parseCodexBar([{ ...row, source: 'codex' }], pool));
+  assert.throws(() => parseCodexBar([{ ...row, source: 'oauth' }], pool));
+  const web = { id: 'claude', collector: { provider: 'claude', source: 'web', windowModels: { 'claude-weekly-scoped-fable': [] } } };
+  const scoped = { ...row, source: 'web', usage: { ...row.usage, extraRateWindows: [{ id: 'claude-weekly-scoped-fable', window: { usedPercent: 50 } }] } };
+  const w = parseCodexBar([scoped], web);
+  assert.equal(w.windows.length, 3); assert.deepEqual(w.windows[2].models, []); assert.deepEqual(w.warnings, []);
+  assert.throws(() => parseCodexBar([row], web));
+});
 test('Claude statusline retains independent missing windows and rejects invented values', () => {
   const time = new Date().toISOString(), reset = Math.floor(Date.now() / 1000) + 600;
   const q = parseClaudeStatusline({ rate_limits: { seven_day: { used_percentage: 42.5, resets_at: reset } } }, 'claude', time);
