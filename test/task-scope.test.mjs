@@ -13,7 +13,7 @@ async function scopedFixture(t) {
   const f = await fixture(t);
   f.config.candidates[0] = candidate('luna', 'codex', {
     model: luna, thinking: 'max', roles: ['builder', 'checker'], prior: 1,
-    taskScope: 'small-or-verification',
+    taskScope: 'small-or-verification', harnesses: ['pi'],
   });
   f.config.candidates[1].roles = ['advisor', 'builder', 'checker'];
   f.config.jev.enabled = true;

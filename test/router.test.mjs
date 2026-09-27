@@ -58,7 +58,7 @@ test('hard identity, role, disabled and native restrictions precede Jev', async 
   await assert.rejects(route({ ...request, pin: { model: 'openai-codex/not-configured' } }, f.options), noRoute);
   await assert.rejects(route({ ...request, pin: { model: 'openai-codex/a', thinking: 'max' } }, f.options), noRoute);
   await assert.rejects(route({ ...request, role: 'unknown' }, f.options), noRoute);
-  f.config.candidates = [candidate('a', 'codex', { thinking: 'max' })]; await f.save();
+  f.config.candidates = [candidate('a', 'codex', { thinking: 'max', harnesses: ['pi'] })]; await f.save();
   await assert.rejects(route({ ...request, harness: 'native' }, f.options), noRoute);
   assert.equal((await route(request, f.options)).selected.thinking, 'max');
   f.config.candidates[0].enabled = false; await f.save(); await assert.rejects(route(request, f.options), noRoute);

@@ -30,7 +30,7 @@ export async function importProfiles(directory: string): Promise<Candidate[]> {
         const order = role === undefined ? 1000 : rank + (guide.name === preferred ? 0 : 100);
         const candidate: Candidate = catalog.get(id) ?? {
           id, model: r.model, thinking: r.thinking as Thinking, roles: [],
-          harnesses: pool === 'cursor' || (pool === 'codex' && r.thinking === 'max') ? ['pi'] : ['pi', 'native'],
+          harnesses: pool === 'cursor' ? ['pi'] : ['pi', 'native'],
           pool, fit: '', prior: 0.7, rank: order, enabled: true, profiles: [], benchmarks: [],
         } satisfies Candidate;
         const firstProfile = !candidate.profiles.includes(guide.name);
