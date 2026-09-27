@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util';
 import { access } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { defaultConfigPath, initialConfig, loadConfig, parseConfig, privateJson, readJson, check, object, benchmarks, outcomes, quotaSnapshot } from './config.js';
+import { applyRoster, defaultConfigPath, initialConfig, loadConfig, parseConfig, privateJson, readJson, check, object, benchmarks, outcomes, quotaSnapshot } from './config.js';
 import { matchesOutcome, outcomeScore, roleKey } from './engine.js';
 import { importProfiles } from './profiles.js';
 import { fetchBenchmarks, readBenchmarkFile } from './benchmarks.js';
@@ -13,7 +13,8 @@ import { Store } from './store.js';
 import { RouterError, type RouteRequest, type BenchmarkSource } from './types.js';
 
 const help = `agent-router commands (JSON on stdout; local state is private):
-  init [--profiles DIR] [--codex | --codexbar] [--config FILE]   create config; never overwrite
+  init [--roster FILE | --profiles DIR] [--codex | --codexbar] [--config FILE]   create config; never overwrite
+  roster use --file ROSTER.json                       read candidates from a plain roster file
   route --file REQUEST.json [--dry-run]              --file - reads stdin
   release ID | renew ID
   status                                             quotas, leases, evidence coverage
@@ -40,7 +41,7 @@ async function stdinJson(): Promise<unknown> {
 }
 async function main(): Promise<void> {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
-    config: { type: 'string' }, profiles: { type: 'string' }, codexbar: { type: 'boolean' }, codex: { type: 'boolean' }, api: { type: 'boolean' },
+    config: { type: 'string' }, profiles: { type: 'string' }, roster: { type: 'string' }, codexbar: { type: 'boolean' }, codex: { type: 'boolean' }, api: { type: 'boolean' },
     file: { type: 'string' }, pool: { type: 'string' }, source: { type: 'string' },
     candidate: { type: 'string' }, model: { type: 'string' }, variant: { type: 'string' }, metric: { type: 'string' },
     cohort: { type: 'string' }, 'evidence-url': { type: 'string' }, 'dry-run': { type: 'boolean' }, help: { type: 'boolean' },
@@ -55,19 +56,31 @@ async function main(): Promise<void> {
     check(!(values.codex && values.codexbar), 'Choose --codex or --codexbar');
     const config = initialConfig(path);
     if (values.codex) config.pools.find(p => p.id === 'codex')!.collector = { provider: 'codex', source: 'app-server', command: 'codex', windowModels: {} };
-    config.candidates = await importProfiles(values.profiles || join(homedir(), '.pi', 'agent', 'intelligence-profiles'));
+    check(!(values.roster && values.profiles), 'Choose --roster or --profiles');
+    if (values.roster) config.rosterFile = resolve(values.roster);
+    if (config.rosterFile) applyRoster(config, await readJson(config.rosterFile));
+    else config.candidates = await importProfiles(values.profiles || join(homedir(), '.pi', 'agent', 'intelligence-profiles'));
     check(config.candidates.length, 'No profile candidates found');
     if (values.codexbar) for (const pool of config.pools) {
       if (pool.id === 'cursor') continue;
       pool.collector = { provider: pool.id === 'codex' ? 'codex' : 'claude', source: pool.id === 'codex' ? 'cli' : 'oauth', command: 'codexbar', windowModels: {} };
     }
     parseConfig(config);
-    await privateJson(path, config, true);
+    // A roster-backed config stores no candidates: the roster file is read on every load.
+    await privateJson(path, config.rosterFile ? { ...config, candidates: [] } : config, true);
     output({ config: path, candidates: config.candidates.length, enabled: true }); return;
   }
   if (command === 'route') { output(await route(await input() as RouteRequest, { configPath: path, dryRun: values['dry-run'] })); return; }
   if (command === 'release' || command === 'renew') {
     check(sub, 'Decision ID required'); await (command === 'release' ? release : renew)(sub, { configPath: path }); output({ [command]: sub }); return;
+  }
+  if (command === 'roster') {
+    check(sub === 'use' && values.file, 'Usage: roster use --file ROSTER.json');
+    const raw = object(await readJson(path)), rosterFile = resolve(values.file);
+    parseConfig(applyRoster(structuredClone({ ...raw, rosterFile }), await readJson(rosterFile)));
+    await privateJson(path, { ...raw, rosterFile, candidates: [] });
+    const loaded = await loadConfig(path);
+    output({ rosterFile, candidates: loaded.candidates.map(c => c.id) }); return;
   }
   const config = await loadConfig(path);
   if (command === 'auth') {
@@ -125,6 +138,7 @@ async function main(): Promise<void> {
         await privateJson(destination, rows); output({ file: destination, observations: rows.length }); return;
       }
       if (sub === 'map') {
+        check(!config.rosterFile, 'Candidates come from rosterFile; benchmark mappings need an inline catalog');
         const candidate = config.candidates.find(c => c.id === values.candidate); check(candidate, 'Unknown candidate');
         const row = store.evidence().find(o => o.source === values.source && o.model === values.model && o.variant === values.variant && o.metric === values.metric && o.cohort === values.cohort);
         check(row && values['evidence-url'], 'Exact cached benchmark row and --evidence-url required');

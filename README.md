@@ -12,13 +12,35 @@ cd agent-router
 npm ci
 npm test
 npm link
-agent-router init --codex
+agent-router init --roster ~/.config/crew/roster.json --codex   # or --profiles DIR
 agent-router auth typesafe            # reads TYPESAFE_API_KEY, never prints it
 agent-router quota refresh
 agent-router status
 ```
 
-`init` imports the union of `~/.pi/agent/intelligence-profiles/*.json`, including each declared model's `defaultThinking` and every recommended effort. It deduplicates exact model/effort pairs and preserves fit, character and profile provenance. Recommendations are guidance, not role eligibility: imported candidates support advisor/builder/checker (and any additional declared roles), while recommendations set role-specific tie-break ranks. Optional catalog models remain available even without recommendation rows. Operators may add supported models or explicitly restrict candidate roles in router config. Initial priors are neutral `0.7`; the ACTIVE guide only supplies tie-break preference. Subsequent profile switches do not rewrite router policy. No reasoning efforts, model aliases or benchmark mappings are inferred. Native Cursor transport is excluded; Codex runs `max` natively for models that list it (GPT-6).
+### Roster file
+
+The simplest catalog is a plain roster you edit by hand. The config's `rosterFile` points at it, and it replaces the inline `candidates` on every load:
+
+```json
+{ "models": [
+  { "model": "codex/gpt-6-sol", "effort": "high", "roles": ["advisor", "builder"], "cost": 0.15,
+    "about": "the workhorse", "use": "implementation whose approach is clear…", "avoid": "open product decisions…" },
+  { "model": "opencode/opencode-go/kimi-k3", "effort": "max", "roles": ["builder"], "cost": 0.1,
+    "use": "bounded implementation…" }
+] }
+```
+
+- `model` is `<host>/<model id>`. The host names the quota pool (override with `pool`); a host without a configured pool gets one with `unknown: allow`, so an unobserved subscription isn't penalized.
+- `use` and `avoid` become the fit guidance Jev judges. Name concrete kinds of work, including what each model is *worse* at: guidance that calls every model "preferred" makes Jev score them all alike, and then quota headroom decides.
+- `cost` feeds [Cost](#cost). `scope: "small-or-verification"` feeds [task scope](#restricted-task-scope). `prior` defaults to `0.7`, `enabled` to `true`.
+- File order is the tie-break preference within each role. Candidates run on the `native` harness.
+
+`agent-router init --roster FILE` creates a config with no profiles, and `agent-router roster use --file FILE` switches an existing one. Benchmark mappings need an inline catalog.
+
+### Profile import
+
+Without `--roster`, `init` imports the union of `~/.pi/agent/intelligence-profiles/*.json`, including each declared model's `defaultThinking` and every recommended effort. It deduplicates exact model/effort pairs and preserves fit, character and profile provenance. Recommendations are guidance, not role eligibility: imported candidates support advisor/builder/checker (and any additional declared roles), while recommendations set role-specific tie-break ranks. Optional catalog models remain available even without recommendation rows. Operators may add supported models or explicitly restrict candidate roles in router config. Initial priors are neutral `0.7`; the ACTIVE guide only supplies tie-break preference. Subsequent profile switches do not rewrite router policy. No reasoning efforts, model aliases or benchmark mappings are inferred. Imported Cursor candidates are Pi-only; a candidate's `harnesses` list is the only transport restriction.
 
 Configuration defaults to `~/.config/agent-router/config.json`; override with `AGENT_ROUTER_CONFIG` or `--config`. `init` refuses to overwrite configuration. It sets `enabled: true` and an absolute `modulePath` to the built library. Inspect policy before enabling a caller integration. Credentials and SQLite quota/lease/audit state live alongside config, **outside the checkout**. Files are `0600`; the state directory is `0700`. Environment keys override the optional credentials file. Benchmark snapshots have a separate configurable path below.
 

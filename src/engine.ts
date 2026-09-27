@@ -29,8 +29,6 @@ export function evaluate(config: Config, request: RouteRequest, quotas: Map<stri
     if (!candidate.enabled) hard.push('disabled');
     if (!candidate.roles.includes(role)) hard.push('role');
     if (!candidate.harnesses.includes(request.harness)) hard.push('harness');
-    // Native transport constraints cannot be bypassed by an over-broad catalog.
-    if (request.harness === 'native' && !/^(openai-codex|anthropic|claude-bridge)\//.test(candidate.model)) hard.push('native-capability');
     if (request.pin && (candidate.model !== request.pin.model || (request.pin.thinking && candidate.thinking !== request.pin.thinking))) hard.push('pin');
     // Assessment only builds the Jev shortlist. Every actual admission requires positive scope evidence.
     const taskScope = candidate.taskScope ? judgment?.taskScope : undefined;

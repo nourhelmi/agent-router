@@ -31,6 +31,27 @@ export interface Candidate {
   /** Relative quota burn of one assignment, 0 (cheapest) to 1 (dearest). Operator-set; see policy.costWeight. */
   cost?: number;
 }
+/**
+ * One line of a hand-edited roster. `model` is `<host>/<model id>`; the host names the quota pool
+ * unless `pool` says otherwise. File order is preference order within each role.
+ */
+export interface RosterEntry {
+  model: string;
+  effort: Thinking;
+  roles: string[];
+  /** 0 (cheapest) to 1 (dearest): the share of your limits one assignment burns. */
+  cost: number;
+  /** One phrase on what the model is, e.g. "the workhorse". */
+  about?: string;
+  /** When to pick it. Concrete kinds of work; this and `avoid` are what Jev judges. */
+  use: string;
+  /** When not to. Naming what a model is worse at is what lets the router tell models apart. */
+  avoid?: string;
+  scope?: 'small-or-verification';
+  prior?: number;
+  pool?: string;
+  enabled?: boolean;
+}
 export interface Pool {
   id: string;
   reservePercent: number;
@@ -54,6 +75,8 @@ export interface Config {
   credentialsFile: string;
   /** Private, manually refreshed observations. No network fetch during routing. */
   benchmarkFile?: string;
+  /** A plain roster (see RosterEntry) that replaces `candidates` on every load. */
+  rosterFile?: string;
   candidates: Candidate[];
   pools: Pool[];
   policy: {

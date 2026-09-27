@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { RouterError, type Config, type RouteRequest, type BenchmarkRef, type BenchmarkObservation, type Outcome, type QuotaSnapshot } from './types.js';
+import { RouterError, type Candidate, type Config, type RouteRequest, type BenchmarkRef, type BenchmarkObservation, type Outcome, type QuotaSnapshot, type RosterEntry } from './types.js';
 
 export const thinkingLevels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 export function check(ok: unknown, message: string): asserts ok {
@@ -130,7 +130,55 @@ export function validateRequest(value: unknown): RouteRequest {
   return { ...v, ...(v.pin !== undefined ? { pin: { ...v.pin } } : {}) } as RouteRequest;
 }
 export async function loadConfig(path = defaultConfigPath()): Promise<Config> {
-  return parseConfig(await readJson(path));
+  const raw = object(await readJson(path));
+  if (raw.rosterFile !== undefined) {
+    text(raw.rosterFile); check(isAbsolute(raw.rosterFile), 'rosterFile must be absolute');
+    applyRoster(raw, await readJson(raw.rosterFile));
+  }
+  return parseConfig(raw);
+}
+/** Replace a raw config's candidates with the roster's; a host without a pool gets one, quota unobserved and unpenalized. */
+export function applyRoster(raw: Record<string, any>, roster: unknown): Record<string, any> {
+  raw.candidates = rosterCandidates(roster);
+  const pools = Array.isArray(raw.pools) ? raw.pools : [];
+  for (const id of new Set(raw.candidates.map((c: Candidate) => c.pool))) {
+    if (!pools.some((p: { id?: unknown }) => p.id === id)) pools.push({ id, reservePercent: 10, unknown: 'allow' });
+  }
+  raw.pools = pools;
+  return raw;
+}
+const ROSTER_FIELDS = ['model', 'effort', 'roles', 'cost', 'about', 'use', 'avoid', 'scope', 'prior', 'pool', 'enabled'];
+/** Expand a hand-edited roster into candidates: file order is preference within each role. */
+export function rosterCandidates(value: unknown): Candidate[] {
+  const models = object(value).models;
+  check(Array.isArray(models) && models.length > 0 && models.length <= 100, 'Roster needs a nonempty models list');
+  const entries = models.map((raw: unknown) => {
+    const e = object(raw);
+    check(Object.keys(e).every(k => ROSTER_FIELDS.includes(k)), 'Unsupported roster field');
+    text(e.model, 256); check(/^[^/\s]+\/\S+$/.test(e.model), 'Roster model must be <host>/<model id>');
+    check(thinkingLevels.includes(e.effort), 'Invalid roster effort');
+    strings(e.roles); check(e.roles.length > 0, 'Roster entry needs roles');
+    number(e.cost, 0, 1); text(e.use, 4000);
+    if (e.about !== undefined) text(e.about, 200);
+    if (e.avoid !== undefined) text(e.avoid, 4000);
+    if (e.scope !== undefined) check(e.scope === 'small-or-verification', 'Invalid roster scope');
+    if (e.prior !== undefined) number(e.prior, 0, 1);
+    if (e.pool !== undefined) text(e.pool, 64);
+    if (e.enabled !== undefined) check(typeof e.enabled === 'boolean', 'Roster enabled must be boolean');
+    return e as RosterEntry;
+  });
+  const order = new Map<string, string[]>();
+  for (const e of entries) for (const role of e.roles) order.set(role, [...(order.get(role) ?? []), `${e.model}@${e.effort}`]);
+  return entries.map(e => {
+    const id = `${e.model}@${e.effort}`, name = e.model.slice(e.model.indexOf('/') + 1);
+    const roleRanks = Object.fromEntries(e.roles.map(role => [role, order.get(role)!.indexOf(id)]));
+    return {
+      id, model: e.model, thinking: e.effort, roles: e.roles, harnesses: ['native'], pool: e.pool ?? e.model.slice(0, e.model.indexOf('/')),
+      fit: [`${name} at ${e.effort}${e.about ? `: ${e.about}` : ''}.`, `Use for: ${e.use}`, ...(e.avoid ? [`Not for: ${e.avoid}`] : [])].join('\n'),
+      prior: e.prior ?? 0.7, rank: Math.min(...Object.values(roleRanks)), roleRanks, enabled: e.enabled ?? true,
+      profiles: ['roster'], benchmarks: [], cost: e.cost, ...(e.scope ? { taskScope: e.scope } : {}),
+    } satisfies Candidate;
+  });
 }
 export function parseConfig(value: unknown): Config {
   const c = object(value);
@@ -139,6 +187,7 @@ export function parseConfig(value: unknown): Config {
     text(c[field]); check(isAbsolute(c[field]), `${field} must be absolute`);
   }
   if (c.benchmarkFile !== undefined) { text(c.benchmarkFile); check(isAbsolute(c.benchmarkFile), 'benchmarkFile must be absolute'); }
+  if (c.rosterFile !== undefined) { text(c.rosterFile); check(isAbsolute(c.rosterFile), 'rosterFile must be absolute'); }
   check(Array.isArray(c.pools) && c.pools.length > 0 && c.pools.length <= 100, 'Invalid quota pools');
   const pools = new Set<string>();
   for (const raw of c.pools) {
