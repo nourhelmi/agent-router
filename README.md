@@ -81,6 +81,8 @@ flowchart LR
     E --> J["fit ± record"]
     J --> U["score"]
     U --> P["pick"]
+    P ~~~ Z[" "]
+    style Z fill:none,stroke:none
 ```
 
 1. **Filter.** Disabled models, the wrong role or harness, a pin that names another model, a quota
