@@ -64,10 +64,28 @@ The configured candidates are the operator's **currently supported subscription 
 3. Ask one batched TypeSafe request: independent per-candidate five-level task-fit Scores, a task-family Choice, and (only when a shortlisted candidate requires it) separate small-task and verification-only Nouls. Only the bounded task packet, role and supplied model-fit guidance leave the process—not environment, account identity, quotas, benchmark files or conversation history. **Do not put secrets/transcripts in the task packet.** Typed judgments are not proof of capability or safety.
 4. Enforce candidate task-scope restrictions, then accept Scores above `jev.minConfidence` (default `0.35`); otherwise use that candidate's configured prior. On API/credential/response failure, use deterministic fallback inside this package, excluding candidates requiring an unconfirmed scope judgment. Record the actual reason. Version pins are checked against the response; `jev-latest` records the resolved model version.
 5. Blend relevant, fresh, exactly mapped benchmark midrank percentiles into fit (default weight `0.15`, maximum `0.5`). Missing evidence is neutral—not zero. Coding benchmarks apply only when the task-family judgment confidently says coding. General intelligence evidence may inform other tasks. Different metrics/cohorts are normalized separately before averaging.
-6. Combine quality with quota-headroom utility (default `capacityWeight: 0.2`), then tie-break by configured rank and ID. For known quota, capacity is minimum remaining percentage **after reserve**, divided by 100. Unknown capacity receives neutral utility `0.5`, not an invented observed percentage. Worker/lease counts never affect this utility. `unknown: penalize` subtracts `0.2` utility; `allow` omits that penalty; `exclude` rejects it. Defaults: Codex/Claude penalize, Cursor exclude. Select `exclude` for strict measured-quota operation.
-7. Recheck current quota and request-id/lease state, then record the lease atomically after inference. No network operation holds the database writer lock.
+6. Move fit by the candidate's reviewed track record in this role (see [Outcome feedback](#outcome-feedback); off by default).
+7. Combine quality with quota-headroom utility (default `capacityWeight: 0.2`), subtract `policy.costWeight × cost` (see [Cost](#cost); off by default), then tie-break by configured rank and ID. For known quota, capacity is minimum remaining percentage **after reserve**, divided by 100. Unknown capacity receives neutral utility `0.5`, not an invented observed percentage. Worker/lease counts never affect this utility. `unknown: penalize` subtracts `0.2` utility; `allow` omits that penalty; `exclude` rejects it. Defaults: Codex/Claude penalize, Cursor exclude. Select `exclude` for strict measured-quota operation.
+8. Recheck current quota and request-id/lease state, then record the lease atomically after inference. No network operation holds the database writer lock.
 
 Weights, neutral priors, unknown penalties and confidence thresholds are **explicit heuristics**, not calibrated success probabilities, dollar costs or token budgets. Equal percentage headroom does not imply equal absolute provider capacity. Compare representative tasks to expected choices before treating judgments as quality evidence. `route --dry-run` still refreshes configured quotas and calls Jev: it is nonreserving, not offline/read-only. A small smoke test is not an outcome-quality evaluation. Benchmark freshness currently means source-publication/cache age, not a claim that every model was recently reevaluated.
+
+### Cost
+
+Headroom is not cost: a pool with plenty of room can still be the expensive way to do a task. Give each candidate a `cost` from `0` (cheapest) to `1` (dearest): the relative share of your subscription limits one assignment burns, which folds in both the model's appetite and how large that pool's plan is. Set `policy.costWeight` (for example `0.15`) and near-ties go to the cheaper candidate, while a real fit gap still wins: with `0.15`, a candidate at cost `1` needs about `0.16` more fit than one at cost `0`. With `costWeight > 0`, an unpriced candidate counts as cost `1` and reports `cost-unset`. Costs are operator judgments, not token prices.
+
+### Outcome feedback
+
+Callers report reviewed results, and routing learns from them:
+
+```bash
+agent-router outcomes record --file outcome.json   # an object or an array
+agent-router outcomes stats                        # track record per candidate and role
+```
+
+An outcome names the `model` (with or without its provider prefix), `thinking`, `role`, `signal` (`review`: a checker's verdict on that work; `grade`: the dispatching parent's verdict) and `success`, plus a caller-unique `id` (recording it again replaces it, so a parent can revise a grade), `at`, `source`, and optional `run` and `note`. Self-reported completion is not an outcome.
+
+Per candidate and role, outcomes form a Beta posterior centred on the candidate's `prior`, worth `policy.outcomePrior` pseudo-observations (default `6`), each outcome halved in weight every `policy.outcomeHalfLifeMs` (default 30 days). Fit moves by `policy.outcomeWeight × (posterior − prior)` (default `0`, off). A candidate with no outcomes keeps its fit, and outcomes for models outside the roster are stored but unused. Diagnostics show each candidate's `outcome: { n, mean }`.
 
 ### Restricted task scope
 

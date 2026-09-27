@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
-import { benchmarks, quotaSnapshot } from './config.js';
+import { benchmarks, outcomes, quotaSnapshot } from './config.js';
 import { matchesBinding } from './quota.js';
-import type { Config, BenchmarkObservation, QuotaGate, QuotaSnapshot, QuotaWindow, RouteDecision } from './types.js';
+import type { Config, BenchmarkObservation, Outcome, QuotaGate, QuotaSnapshot, QuotaWindow, RouteDecision } from './types.js';
 
 type PermissionFact = { gate: QuotaGate; token: number };
 type QuotaObservation = { snapshot: QuotaSnapshot; token: number };
@@ -105,7 +105,8 @@ export class Store {
       CREATE TABLE IF NOT EXISTS refresh_tokens (pool TEXT PRIMARY KEY, token INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS decisions (id TEXT PRIMARY KEY, request_id TEXT UNIQUE, digest TEXT NOT NULL,
         pool TEXT NOT NULL, expires INTEGER NOT NULL, released INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL);
-      CREATE INDEX IF NOT EXISTS active_pool ON decisions(pool, released, expires);`);
+      CREATE INDEX IF NOT EXISTS active_pool ON decisions(pool, released, expires);
+      CREATE TABLE IF NOT EXISTS outcomes (id TEXT PRIMARY KEY, at INTEGER NOT NULL, data TEXT NOT NULL);`);
     // Additive migration: old loaded clients retain their quota table and all lease/audit IDs.
     for (const row of this.db.prepare('SELECT data FROM quota').all()) this.putQuota(quotaSnapshot(JSON.parse(String(row.data))));
   }
@@ -146,6 +147,17 @@ export class Store {
   }
   putEvidence(evidence: BenchmarkObservation[]): void {
     this.db.prepare('INSERT INTO benchmarks VALUES(1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data').run(JSON.stringify(benchmarks(evidence)));
+  }
+  /** Recording an existing id replaces it: a parent may revise its grade. */
+  putOutcomes(list: Outcome[]): void {
+    const valid = outcomes(list);
+    this.transaction(() => {
+      const put = this.db.prepare('INSERT INTO outcomes VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET at=excluded.at,data=excluded.data');
+      for (const o of valid) put.run(o.id, Date.parse(o.at), JSON.stringify(o));
+    });
+  }
+  outcomes(limit = 20000): Outcome[] {
+    return this.db.prepare('SELECT data FROM outcomes ORDER BY at DESC LIMIT ?').all(limit).map(r => JSON.parse(String(r.data)) as Outcome);
   }
   active(now = Date.now()): Map<string, number> {
     return new Map(this.db.prepare('SELECT pool,count(*) AS n FROM decisions WHERE released=0 AND expires>? GROUP BY pool').all(now)

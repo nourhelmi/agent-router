@@ -36,7 +36,7 @@ export async function route(input: RouteRequest, options: RouteOptions = {}): Pr
     const snapshot = await readBenchmarkFile(config);
     if (snapshot) store.putEvidence(snapshot);
     const evidence = store.evidence();
-    const first = evaluate(config, request, store.quotas(), store.active(), evidence, undefined, Date.now(), 'assessment');
+    const first = evaluate(config, request, store.quotas(), store.active(), evidence, undefined, Date.now(), 'assessment', store.outcomes());
     const eligible = config.candidates.filter(c => first.some(d => d.id === c.id && d.eligible));
     if (!eligible.length) {
       const concurrent = previous(); if (concurrent) return concurrent;
@@ -49,7 +49,7 @@ export async function route(input: RouteRequest, options: RouteOptions = {}): Pr
       const previousDecision = previous(); if (previousDecision) return previousDecision;
       const now = Date.now();
       const quotas = store.quotas();
-      const diagnostics = evaluate(config, request, quotas, store.active(now), store.evidence(), judgment, now);
+      const diagnostics = evaluate(config, request, quotas, store.active(now), store.evidence(), judgment, now, 'admission', store.outcomes());
       const selected = ranked(config, diagnostics, request.role)[0];
       if (!selected) return noRoute(diagnostics);
       const candidate = config.candidates.find(c => c.id === selected.id)!;

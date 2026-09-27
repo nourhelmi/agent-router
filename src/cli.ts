@@ -3,7 +3,8 @@ import { parseArgs } from 'node:util';
 import { access } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { defaultConfigPath, initialConfig, loadConfig, parseConfig, privateJson, readJson, check, object, benchmarks, quotaSnapshot } from './config.js';
+import { defaultConfigPath, initialConfig, loadConfig, parseConfig, privateJson, readJson, check, object, benchmarks, outcomes, quotaSnapshot } from './config.js';
+import { matchesOutcome, outcomeScore, roleKey } from './engine.js';
 import { importProfiles } from './profiles.js';
 import { fetchBenchmarks, readBenchmarkFile } from './benchmarks.js';
 import { parseClaudeStatusline, parseCodexBar, quotaBinding, refreshQuotas } from './quota.js';
@@ -24,6 +25,8 @@ const help = `agent-router commands (JSON on stdout; local state is private):
   benchmarks import --file OBSERVATIONS.json
   benchmarks export [--file JSON]                     private snapshot, never publish
   benchmarks list
+  outcomes record --file OUTCOMES.json                reviewed results (object or array); same id replaces
+  outcomes stats                                      track record per candidate and role
   benchmarks map --candidate ID --source SOURCE --model SOURCE_MODEL
     --variant VARIANT --metric METRIC --cohort COHORT --evidence-url HTTPS_URL
   auth typesafe|artificial-analysis                   save matching environment key privately
@@ -102,6 +105,17 @@ async function main(): Promise<void> {
       check(snapshot.binding === undefined || snapshot.binding === binding, 'Snapshot belongs to an old/different collector binding');
       snapshot.binding = binding;
       store.putQuota(snapshot); if (sub !== 'statusline') output({ stored: snapshot.pool }); return;
+    }
+    if (command === 'outcomes') {
+      if (sub === 'record') { const list = outcomes(await input()); store.putOutcomes(list); output({ recorded: list.length }); return; }
+      check(sub === 'stats', 'Unknown outcomes command');
+      const all = store.outcomes(), now = Date.now(), round = (n: number) => Math.round(n * 1000) / 1000;
+      const candidates = config.candidates.flatMap(c => c.roles.flatMap(role => {
+        const mine = all.filter(o => matchesOutcome(c, o) && roleKey(o.role) === role), score = outcomeScore(c, role, all, config.policy, now);
+        return mine.length ? [{ candidate: c.id, role, outcomes: mine.length, successes: mine.filter(o => o.success).length,
+          ...(score ? { weight: round(score.n), mean: round(score.mean), prior: c.prior } : {}) }] : [];
+      }));
+      output({ outcomes: all.length, unmatched: all.filter(o => !config.candidates.some(c => matchesOutcome(c, o))).length, candidates }); return;
     }
     if (command === 'benchmarks') {
       if (sub === 'list') { output(store.evidence()); return; }

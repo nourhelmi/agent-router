@@ -28,6 +28,8 @@ export interface Candidate {
   /** Requires a fresh semantic scope judgment; pins and fallback cannot bypass it. */
   taskScope?: 'small-or-verification';
   benchmarks: BenchmarkMapping[];
+  /** Relative quota burn of one assignment, 0 (cheapest) to 1 (dearest). Operator-set; see policy.costWeight. */
+  cost?: number;
 }
 export interface Pool {
   id: string;
@@ -63,6 +65,14 @@ export interface Config {
     benchmarkWeight: number;
     capacityWeight: number;
     unknownPenalty: number;
+    /** Utility subtracted per unit of candidate cost; 0 ignores cost. */
+    costWeight: number;
+    /** How far reviewed outcomes may move task fit away from the candidate's prior; 0 ignores them. */
+    outcomeWeight: number;
+    /** Pseudo-observations at the candidate's prior: evidence needed before outcomes dominate. */
+    outcomePrior: number;
+    /** Age at which an outcome counts half. */
+    outcomeHalfLifeMs: number;
   };
   jev: { model: string; timeoutMs: number; minConfidence: number; enabled: boolean };
 }
@@ -99,6 +109,25 @@ export interface BenchmarkObservation extends BenchmarkRef {
   methodology: string;
   sampleSize?: number;
 }
+/**
+ * A reviewed result of work a model did in a role. `review`: a checker's verdict on that work;
+ * `grade`: the dispatching parent's verdict. Recording an existing id replaces it.
+ */
+export interface Outcome {
+  version: 1;
+  id: string;
+  at: string;
+  /** `provider/model` or the bare model id; matched to candidates without the provider. */
+  model: string;
+  thinking: Thinking;
+  role: string;
+  signal: 'review' | 'grade';
+  success: boolean;
+  source: string;
+  run?: string;
+  note?: string;
+}
+export interface OutcomeScore { n: number; mean: number }
 export interface RouteRequest {
   role: string;
   task: string;
@@ -122,6 +151,8 @@ export interface CandidateDiagnostic {
   confidence?: number;
   probabilities?: Record<string, number>;
   taskScope?: TaskScopeAssessment;
+  cost?: number;
+  outcome?: OutcomeScore;
   utility?: number;
 }
 export interface RouteDecision {

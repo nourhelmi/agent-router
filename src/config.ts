@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { RouterError, type Config, type RouteRequest, type BenchmarkRef, type BenchmarkObservation, type QuotaSnapshot } from './types.js';
+import { RouterError, type Config, type RouteRequest, type BenchmarkRef, type BenchmarkObservation, type Outcome, type QuotaSnapshot } from './types.js';
 
 export const thinkingLevels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 export function check(ok: unknown, message: string): asserts ok {
@@ -66,6 +66,23 @@ export function benchmarks(value: unknown): BenchmarkObservation[] {
     check(!seen.has(key), 'Duplicate benchmark identity'); seen.add(key);
   }
   return value as BenchmarkObservation[];
+}
+const OUTCOME_FIELDS = ['version', 'id', 'at', 'model', 'thinking', 'role', 'signal', 'success', 'source', 'run', 'note'];
+export function outcomes(value: unknown): Outcome[] {
+  const list = Array.isArray(value) ? value : [value];
+  check(list.length > 0 && list.length <= 10000, 'Invalid outcomes');
+  return list.map(raw => {
+    const v = object(raw);
+    check(Object.keys(v).every(k => OUTCOME_FIELDS.includes(k)), 'Unsupported outcome field');
+    check(v.version === 1, 'Unsupported outcome version');
+    text(v.id, 256); timestamp(v.at); check(Date.parse(v.at) <= Date.now() + 60000, 'Outcome is in the future');
+    text(v.model, 256); check(thinkingLevels.includes(v.thinking), 'Invalid reasoning effort');
+    text(v.role, 64); check(['review', 'grade'].includes(v.signal), 'Invalid outcome signal');
+    check(typeof v.success === 'boolean', 'Outcome success must be boolean'); text(v.source, 64);
+    if (v.run !== undefined) text(v.run, 256);
+    if (v.note !== undefined) text(v.note, 2000);
+    return v as Outcome;
+  });
 }
 export function quotaSnapshot(value: unknown): QuotaSnapshot {
   const v = object(value);
@@ -153,21 +170,26 @@ export function parseConfig(value: unknown): Config {
       check(v.roles.includes(role), 'Rank references unconfigured role'); number(rank, 0, 1e6);
     }
     check(typeof v.enabled === 'boolean' && Array.isArray(v.benchmarks) && v.benchmarks.length <= 20, 'Invalid candidate');
+    if (v.cost !== undefined) number(v.cost, 0, 1);
     v.benchmarks.forEach((mapping: unknown) => {
       const m = object(benchmarkRef(mapping));
       text(m.evidenceUrl); timestamp(m.verifiedAt);
       check(new URL(m.evidenceUrl).protocol === 'https:', 'Benchmark mapping needs HTTPS evidence');
     });
   }
-  const p = object(c.policy);
+  // Policy fields added after v1 default to off, so older configs keep their behavior.
+  const p: Record<string, any> = c.policy = { ...POLICY_ADDITIONS, ...object(c.policy) };
   for (const k of ['quotaMaxAgeMs', 'refreshCooldownMs', 'refreshTimeoutMs', 'leaseMs', 'benchmarkMaxAgeMs']) number(p[k], 1, 365 * 86400000);
   check(p.leaseMs >= 60000 && p.refreshTimeoutMs <= 60000, 'Invalid lease/refresh bounds');
   for (const k of ['benchmarkWeight', 'capacityWeight', 'unknownPenalty']) number(p[k], 0, 1);
   check(p.benchmarkWeight <= 0.5, 'Benchmarks may not dominate task fit');
+  for (const k of ['costWeight', 'outcomeWeight']) number(p[k], 0, 1);
+  number(p.outcomePrior, 0.1, 1000); number(p.outcomeHalfLifeMs, 86400000, 3650 * 86400000);
   const j = object(c.jev); text(j.model, 128); number(j.timeoutMs, 1, 60000); number(j.minConfidence, 0, 1);
   check(typeof j.enabled === 'boolean', 'Invalid Jev configuration');
   return c as Config;
 }
+const POLICY_ADDITIONS = { costWeight: 0, outcomeWeight: 0, outcomePrior: 6, outcomeHalfLifeMs: 30 * 86400000 };
 export function initialConfig(path = defaultConfigPath()): Config {
   const home = dirname(resolve(path));
   return {
@@ -179,7 +201,7 @@ export function initialConfig(path = defaultConfigPath()): Config {
       { id: 'cursor', reservePercent: 10, unknown: 'exclude' },
     ],
     policy: { quotaMaxAgeMs: 300000, refreshCooldownMs: 60000, refreshTimeoutMs: 20000, leaseMs: 300000,
-      benchmarkMaxAgeMs: 90 * 86400000, benchmarkWeight: 0.15, capacityWeight: 0.2, unknownPenalty: 0.2 },
+      benchmarkMaxAgeMs: 90 * 86400000, benchmarkWeight: 0.15, capacityWeight: 0.2, unknownPenalty: 0.2, ...POLICY_ADDITIONS },
     jev: { enabled: true, model: 'jev-latest', timeoutMs: 10000, minConfidence: 0.35 },
   };
 }
