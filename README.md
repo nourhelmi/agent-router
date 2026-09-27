@@ -57,9 +57,12 @@ checked against what you have left.
 ```sh
 git clone https://github.com/nourhelmi/agent-router.git && cd agent-router
 npm ci && npm test && npm link
-agent-router init --roster ~/.config/crew/roster.json --codex   # your models; see below
-agent-router auth typesafe                                        # reads TYPESAFE_API_KEY, never prints it
-echo '{"role":"builder","task":"Rename formatDuration across packages/ui","harness":"native"}' \
+
+agent-router init --roster ~/.config/crew/roster.json --codex  # your models
+agent-router auth typesafe          # reads TYPESAFE_API_KEY; never prints it
+
+echo '{"role": "builder", "harness": "native",
+       "task": "Rename formatDuration across packages/ui"}' \
   | agent-router route --file - --dry-run
 ```
 
@@ -74,10 +77,9 @@ and track record decide.
 
 ```mermaid
 flowchart LR
-    T["task + role"] --> E{"filter"}
-    E --> J["Jev fit"]
-    J --> Q["± track record"]
-    Q --> U["score"]
+    T["task"] --> E{"filter"}
+    E --> J["fit ± record"]
+    J --> U["score"]
     U --> P["pick"]
 ```
 
@@ -223,11 +225,12 @@ practice they rarely separate frontier models, and they lag new releases. Their 
 start for a model you haven't tried; your own track record takes over from there.
 
 ```sh
-agent-router benchmarks refresh --source deepswe              # DeepSWE's public leaderboard JSON
-agent-router benchmarks refresh --source artificial-analysis  # the public models page, no key
+agent-router benchmarks refresh --source deepswe
+agent-router benchmarks refresh --source artificial-analysis   # public page, no key
 agent-router benchmarks list
-agent-router benchmarks map --candidate 'codex/gpt-6-astra@xhigh' --source deepswe --model gpt-6-astra \
-  --variant mini-swe-agent:xhigh:mini_swe_agent_gpt_6_astra_xhigh --metric pass_at_1 \
+agent-router benchmarks map --candidate 'codex/gpt-6-astra@xhigh' \
+  --source deepswe --model gpt-6-astra --metric pass_at_1 \
+  --variant mini-swe-agent:xhigh:mini_swe_agent_gpt_6_astra_xhigh \
   --cohort v1.1:113:mini-swe-agent:xhigh --evidence-url https://…
 ```
 
@@ -268,7 +271,7 @@ const decision = await route({
 });
 
 // Launch exactly decision.selected.model at decision.selected.thinking.
-// Renew the lease while the worker runs; release it once the worker has definitely stopped.
+// Renew the lease while the worker runs; release it once it has stopped.
 await renew(decision.id);
 await release(decision.id);
 ```
