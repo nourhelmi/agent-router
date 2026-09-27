@@ -99,7 +99,7 @@ async function main(): Promise<void> {
       const rows = await readBenchmarkFile(config); if (rows) store.putEvidence(rows);
     }
     if (command === 'status') {
-      output({ version: 1, enabled: config.enabled, quotas: [...store.quotas().values()], active: Object.fromEntries(store.active()), refresh: store.refreshStatus(),
+      output({ version: 1, enabled: config.enabled, ...(config.rosterFile ? { rosterFile: config.rosterFile } : {}), quotas: [...store.quotas().values()], active: Object.fromEntries(store.active()), refresh: store.refreshStatus(),
         benchmarks: { observations: store.evidence().length, candidates: config.candidates.map(c => ({ id: c.id, mapped: c.benchmarks.length })) } }); return;
     }
     if (command === 'quota') {
