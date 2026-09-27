@@ -1,7 +1,9 @@
 {
   "name": "@nourhelmi/agent-router",
   "version": "0.1.0",
-  "description": "Authoritative task-fit routing with Jev, quota constraints, and provenance-aware benchmarks",
+  "description": "Pick the right AI model for every coding-agent task: Jev task fit, your costs, live quota and reviewed track records.",
+  "keywords": ["ai-agents", "llm-routing", "model-routing", "coding-agents", "claude-code", "codex", "jev", "developer-tools"],
+  "homepage": "https://github.com/nourhelmi/agent-router#readme",
   "type": "module",
   "engines": { "node": ">=24" },
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },

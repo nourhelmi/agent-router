@@ -1,54 +1,254 @@
-# Agent Router
+<p align="center">
+  <img src="assets/banner.jpg" alt="agent-router: one task in, the right model out" width="100%">
+</p>
 
-Authoritative worker identity selection: **task-fit guidance + Jev judgments + observed quotas + explicitly mapped benchmarks**. Node 24+, TypeScript declarations, no runtime dependencies. MIT.
+<p align="center">
+  <b>The right model for every task your coding agents hand off.</b><br>
+  It weighs each model's fit for the task, what it costs against your subscriptions, how much quota
+  is left,<br>and how its reviewed work has gone. Then it picks one, and tells you why.
+</p>
 
-The caller assigns work and permissions. This package selects an exact `provider/model` and reasoning effort, records a worker lifecycle lease, and explains the decision. It does **not** limit worker counts, launch agents, alter prompts, switch accounts, access project files, or change the current advisor model. The objective is the best feasible route under configured policy and observed evidence—not an optimality guarantee.
+<p align="center">
+  <a href="https://github.com/nourhelmi/agent-router/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/nourhelmi/agent-router/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-7aa2f7?style=flat-square"></a>
+  <img alt="Node 24+" src="https://img.shields.io/badge/node-%E2%89%A5%2024-9ece6a?style=flat-square">
+  <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-bb9af7?style=flat-square">
+  <img alt="TypeScript types" src="https://img.shields.io/badge/types-included-7dcfff?style=flat-square">
+  <a href="https://github.com/nourhelmi/crew"><img alt="Works with crew" src="https://img.shields.io/badge/works%20with-crew-ff9e64?style=flat-square"></a>
+</p>
 
-## Install and initialize
+<p align="center">
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#your-roster">Your roster</a> ·
+  <a href="#learning-from-review">Learning</a> ·
+  <a href="#quotas">Quotas</a> ·
+  <a href="#library">Library</a> ·
+  <a href="#cli">CLI</a> ·
+  <a href="#faq">FAQ</a>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="assets/hero.svg" alt="agent-router decisions on three tasks: a rename goes to the cheap model on a near-tie, a design decision goes to Opus on a clear fit gap, and a money-code review goes to Sol at xhigh" width="100%">
+</p>
+
+## Why agent-router
+
+Agents that delegate pick a model by habit, usually the one they're running on. In one real
+workstream, seven Opus lead agents launched 60 helpers, and every one ran on Opus. That burned
+half a week of the smaller subscription while the bigger one sat at 12%. The fix isn't "always
+use the best model" or "always the cheapest". It's **the cheapest model that fits this task**,
+checked against what you have left.
+
+| | |
+|---|---|
+| **Fit, per task** | [Jev](https://typesafe.ai), a small typed-judgment model, scores each candidate's written guidance against the task, with a probability distribution and a confidence. |
+| **Cost you set** | Each model gets a cost from 0 to 1: the share of your limits one assignment burns. Near-ties go to the cheaper model; a real fit gap still wins. |
+| **Live quota** | Reads Codex and Claude rate-limit windows. It never routes into a window past its reserve, and an unobserved window counts as unknown, never as zero used. |
+| **Learns from review** | Checker verdicts and parent grades build a decaying track record per model and role, which moves future fit. |
+| **Scoped models** | A cheap model can be limited to small or verification-only tasks. |
+| **Explains itself** | Every decision lists every candidate: why it was eligible or not, its fit distribution, cost, headroom and track record. |
+| **Boring to run** | Node 24, zero runtime dependencies, built-in `node:sqlite`, private `0600` files, no daemon. |
+
+## Quickstart
 
 ```sh
-git clone https://github.com/nourhelmi/agent-router.git
-cd agent-router
-npm ci
-npm test
-npm link
-agent-router init --roster ~/.config/crew/roster.json --codex   # or --profiles DIR
-agent-router auth typesafe            # reads TYPESAFE_API_KEY, never prints it
-agent-router quota refresh
-agent-router status
+git clone https://github.com/nourhelmi/agent-router.git && cd agent-router
+npm ci && npm test && npm link
+agent-router init --roster ~/.config/crew/roster.json --codex   # your models; see below
+agent-router auth typesafe                                        # reads TYPESAFE_API_KEY, never prints it
+echo '{"role":"builder","task":"Rename formatDuration across packages/ui","harness":"native"}' \
+  | agent-router route --file - --dry-run
 ```
 
-### Roster file
+With [crew](https://github.com/nourhelmi/crew), you don't call it yourself: every `crew spawn` asks
+the router, and `crew roster` (or the `/crew:roster` skill) manages the same roster file. Any caller
+that speaks the [library](#library) or [CLI](#cli) contract works.
 
-The simplest catalog is a plain roster you edit by hand. The config's `rosterFile` points at it, and it replaces the inline `candidates` on every load:
+No TypeSafe key? Routing still works: each model's fit falls back to its `prior`, and cost, quota
+and track record decide.
+
+## How it works
+
+```mermaid
+flowchart LR
+    T["task + role"] --> E{"eligible?"}
+    E -->|"role, harness, pin, quota reserve, task scope"| J["Jev scores fit<br>for each model"]
+    J --> Q["quality = fit<br>± track record<br>± benchmarks"]
+    Q --> U["score = 0.8·quality<br>+ 0.2·headroom<br>− costWeight·cost"]
+    U --> P["pick, lease<br>and diagnostics"]
+```
+
+1. **Filter.** Disabled models, the wrong role or harness, a pin that names another model, a quota
+   window inside its reserve, and a scoped model on a task Jev can't confirm is small are all out.
+2. **Judge.** One batched Jev request scores every remaining model's guidance against the task on a
+   five-level rubric, and classifies the task (coding or general; small; verification-only). Only the
+   task text, the role and your guidance leave the machine: no environment, quotas, account details
+   or history. Don't put secrets in task text.
+3. **Adjust.** Fit moves by the model's reviewed track record in this role, and optionally by mapped
+   benchmark percentiles. A score below Jev's confidence floor falls back to the model's prior.
+4. **Score.** `0.8 × quality + 0.2 × quota headroom − costWeight × cost`. Ties go to roster order.
+5. **Commit.** Quotas and leases are rechecked, and the decision is recorded atomically with every
+   candidate's diagnostics. `--dry-run` reserves no lease.
+
+The weights are explicit heuristics, not calibrated probabilities. Check the picks on real tasks
+before you trust them (the roster workflow below does exactly that).
+
+## Your roster
+
+The roster is the list of models you can run, per role, in preference order: a plain file you edit
+by hand. The config's `rosterFile` points at it, and it's re-read on every route.
 
 ```json
 { "models": [
   { "model": "codex/gpt-6-sol", "effort": "high", "roles": ["advisor", "builder"], "cost": 0.15,
-    "about": "the workhorse", "use": "implementation whose approach is clear…", "avoid": "open product decisions…" },
-  { "model": "opencode/opencode-go/kimi-k3", "effort": "max", "roles": ["builder"], "cost": 0.1,
-    "use": "bounded implementation…" }
+    "about": "the workhorse",
+    "use": "implementation whose approach is clear; lanes that execute a known plan",
+    "avoid": "open product or architecture decisions; subtle money or security logic" },
+  { "model": "claude/claude-opus-5-5", "effort": "high", "roles": ["advisor", "builder"], "cost": 1,
+    "about": "the strongest judgment",
+    "use": "lanes whose hard part is deciding what to build; greenfield UX",
+    "avoid": "work whose approach is already decided; review or verification" },
+  { "model": "codex/gpt-6-luna", "effort": "max", "roles": ["builder", "checker"], "cost": 0.05,
+    "use": "mechanical edits with an exact spec; scripted checks with a fixed pass condition",
+    "avoid": "judging evidence, review, debugging", "scope": "small-or-verification" }
 ] }
 ```
 
-- `model` is `<host>/<model id>`. The host names the quota pool (override with `pool`); a host without a configured pool gets one with `unknown: allow`, so an unobserved subscription isn't penalized.
-- `use` and `avoid` become the fit guidance Jev judges. Name concrete kinds of work, including what each model is *worse* at: guidance that calls every model "preferred" makes Jev score them all alike, and then quota headroom decides.
-- `cost` feeds [Cost](#cost). `scope: "small-or-verification"` feeds [task scope](#restricted-task-scope). `prior` defaults to `0.7`, `enabled` to `true`.
-- File order is the tie-break preference within each role. Candidates run on the `native` harness.
+| Field | Meaning |
+|---|---|
+| `model` | `<host>/<model id>`. The host names the quota pool (override with `pool`). A host with no configured pool gets one that isn't penalized for being unobserved. |
+| `effort` | The reasoning effort this entry runs at. List a model twice for two efforts. |
+| `roles` | Which of `advisor`, `builder`, `checker` it may take. |
+| `cost` | 0 (cheapest) to 1 (dearest). See [Cost](#cost). |
+| `about`, `use`, `avoid` | The guidance Jev judges. |
+| `scope` | `"small-or-verification"`: see [Task scope](#task-scope). |
+| `prior`, `enabled` | Fit when Jev is unsure or unavailable (default `0.7`), and an off switch (default on). |
 
-`agent-router init --roster FILE` creates a config with no profiles, and `agent-router roster use --file FILE` switches an existing one. Benchmark mappings need an inline catalog.
+**Write `avoid` for every model.** Jev scores each model against its own guidance, so if every entry
+sounds good at everything, they all score about 0.9, and quota headroom quietly picks for you. Naming
+what a model is worse at is what spreads the scores out. Then try 5–10 of your real tasks with
+`route --dry-run` and adjust until the picks match what you'd choose.
 
-### Profile import
+`agent-router init --roster FILE` sets up a new config around a roster; `agent-router roster use
+--file FILE` switches an existing one.
 
-Without `--roster`, `init` imports the union of `~/.pi/agent/intelligence-profiles/*.json`, including each declared model's `defaultThinking` and every recommended effort. It deduplicates exact model/effort pairs and preserves fit, character and profile provenance. Recommendations are guidance, not role eligibility: imported candidates support advisor/builder/checker (and any additional declared roles), while recommendations set role-specific tie-break ranks. Optional catalog models remain available even without recommendation rows. Operators may add supported models or explicitly restrict candidate roles in router config. Initial priors are neutral `0.7`; the ACTIVE guide only supplies tie-break preference. Subsequent profile switches do not rewrite router policy. No reasoning efforts, model aliases or benchmark mappings are inferred. Imported Cursor candidates are Pi-only; a candidate's `harnesses` list is the only transport restriction.
+## Cost
 
-Configuration defaults to `~/.config/agent-router/config.json`; override with `AGENT_ROUTER_CONFIG` or `--config`. `init` refuses to overwrite configuration. It sets `enabled: true` and an absolute `modulePath` to the built library. Inspect policy before enabling a caller integration. Credentials and SQLite quota/lease/audit state live alongside config, **outside the checkout**. Files are `0600`; the state directory is `0700`. Environment keys override the optional credentials file. Benchmark snapshots have a separate configurable path below.
+Headroom isn't cost: a pool with plenty of room can still be the expensive way to do a task. A
+model's `cost` is the share of your limits one assignment burns. That folds in both how hungry the
+model is and how big that subscription is: the same model is dearer on a small plan. With
+`policy.costWeight: 0.15`, a model at cost 1 needs about 0.16 more fit than one at cost 0 to win.
+With cost switched on, an unpriced model counts as cost 1 and says `cost-unset`. Costs are your
+judgment, not token prices.
 
-`--codex` uses the installed Codex CLI directly: a bounded `codex app-server --stdio` subprocess, initialization, and `account/rateLimits/read`. It does not need CodexBar, a GUI, or a long-running router daemon. Codex owns its normal authentication; the router never reads/copies its tokens, starts login, switches accounts, consumes reset credits, or enables automatic reserve/paid fallback. It uses the active CLI account and `CODEX_HOME`, not a CodexBar account selector. See the [app-server protocol](https://developers.openai.com/codex/app-server).
+## Learning from review
 
-Claude remains a separate adapter: ingest normalized snapshots from an authorized producer, or fresh Claude statusline data. Nothing installs or changes statusline/auth settings. Optional `--codexbar` instead configures the legacy fixed `usage --provider codex --source cli` and `usage --provider claude --source oauth` collectors, checked against CodexBar v0.60.5. Never `auto`/`web`, cookies, or all-account aggregation. **A failing CLI source does not prove the CodexBar GUI or Claude login is broken:** their source, fallback and credential-access paths can differ. Collector failure obeys configured unknown-quota policy, without attempting authentication repair.
+Callers report reviewed results, and routing learns from them:
 
-**Account binding is a deployment assertion.** A pool's configured collector must observe the same account used by its workers. An optional CodexBar `account` binds an exact returned label. Cached snapshots carry an opaque digest of collector/provider/source/account, configured window scopes and acquisition-home environment. Evidence is retained separately for each `(pool, binding)`; only a matching binding can constrain current routing. Changing that binding makes old and in-flight snapshots ineligible until a matching observation arrives, even if refresh fails. A late previous collector cannot evict a current binding's denial. Unconfigured ambient account changes cannot be detected without credential access. The router does not authenticate workers or prove that Pi and native CLIs share credentials; separate their pools/configurations when they do not. It refuses multi-account merging.
+```sh
+agent-router outcomes record --file outcome.json   # an object or an array
+agent-router outcomes stats                        # track record per model and role
+```
+
+An outcome names the `model`, `thinking`, `role`, a `signal` (`review` is a checker's verdict on
+that work; `grade` is the dispatching parent's) and `success`, plus a caller-unique `id` (recording
+it again replaces it, so a grade can be revised), `at`, `source`, and optional `run` and `note`. A
+worker's own "done" is not an outcome.
+
+Per model and role, outcomes form a Beta posterior centred on the model's `prior`, worth
+`outcomePrior` pseudo-observations (default 6). Each outcome counts half as much every
+`outcomeHalfLifeMs` (default 30 days). Fit moves by `outcomeWeight × (posterior − prior)`. A model
+with no outcomes keeps its fit, and outcomes for models outside the roster are kept but unused.
+crew records both signals for you: a checker spawned with `--checks <run>`, and `crew grade`.
+
+## Task scope
+
+`scope: "small-or-verification"` admits a model only when Jev says, with probability at least 0.9,
+that the whole task is small and tightly bounded, or that its deliverable is verification only. The
+two judgments are kept separate, never averaged. A checker role, a high fit, a benchmark or a pin is
+not permission. If the judgment is missing, uncertain or unavailable, the model is out
+(`task-scope-unconfirmed`) and the others still route.
+
+## Quotas
+
+Each pool (a subscription) can have a collector:
+
+- **Codex:** `init --codex` reads rate limits straight from the installed Codex CLI (a short
+  `codex app-server --stdio` exchange). It needs no GUI or daemon and never touches Codex's
+  credentials.
+- **Claude:** pipe fresh Claude Code status-line data into `quota statusline --pool claude`, ingest
+  normalized snapshots, or use the optional CodexBar collector (`init --codexbar`).
+
+A window within `reservePercent` of full excludes its pool's models. Windows are never averaged, and
+an expired or missing window is unknown, not free. Unknown quota follows the pool's policy:
+`penalize` (default: −0.2), `allow`, or `exclude`.
+
+<details>
+<summary><b>Quota semantics in detail</b></summary>
+
+- **Freshness.** Defaults: a 5-minute quota age and a 1-minute retry cooldown. For one-minute
+  observations, set `quotaMaxAgeMs: 60000` and `refreshCooldownMs: 15000`. No background polling.
+- **Account binding** is a deployment assertion: a pool's collector must observe the account its
+  workers use. Snapshots carry a digest of collector, provider, source, account, window scopes and
+  home directory, and evidence is kept per `(pool, binding)`. Changing the binding makes old
+  snapshots ineligible until a matching one arrives. Multi-account merging is refused.
+- **Scoped windows.** `collector.windowModels` maps named windows to exact model ids; `[]` marks a
+  window irrelevant. Scopes are never guessed from aliases. "Primary" doesn't necessarily mean five
+  hours: durations come from the provider.
+- **Permissions.** Explicit provider denials stay restrictive through missing updates, staleness and
+  resets until the same binding reports recovery. Only a strictly newer explicit allow recovers.
+  Equal-time contradictions deny. Percentages above 100 stay exhausted.
+- **Ordering.** Direct Codex reads use the database-admitted start time and a per-binding refresh
+  token, so a delayed older response can't pose as newer recovery. Failed collection never freshens
+  old evidence. Imports never inherit read-token authority.
+- **Cache.** Distinct same-time window views are all kept, with deterministic `quota-view:N` ids for
+  conflicts; nothing is averaged or synthesized. Migration is additive, and legacy rows merge on open.
+- **CodexBar** can't reconstruct fields it doesn't expose, and a failing CLI source doesn't prove
+  the GUI or login is broken. A percentage is not proof a provider will accept a request.
+
+</details>
+
+## Benchmarks (optional)
+
+Public leaderboards can nudge fit (`benchmarkWeight`, default 0.15, at most 0.5), but only through
+explicit, evidence-backed mappings from a leaderboard row to a roster entry at the same effort. In
+practice they rarely separate frontier models, and they lag new releases. Their best use is a cold
+start for a model you haven't tried; your own track record takes over from there.
+
+```sh
+agent-router benchmarks refresh --source deepswe              # DeepSWE's public leaderboard JSON
+agent-router benchmarks refresh --source artificial-analysis  # the public models page, no key
+agent-router benchmarks list
+agent-router benchmarks map --candidate 'codex/gpt-6-astra@xhigh' --source deepswe --model gpt-6-astra \
+  --variant mini-swe-agent:xhigh:mini_swe_agent_gpt_6_astra_xhigh --metric pass_at_1 \
+  --cohort v1.1:113:mini-swe-agent:xhigh --evidence-url https://…
+```
+
+<details>
+<summary><b>Benchmark sources, storage and licensing</b></summary>
+
+- Routing never fetches: it reads a private local snapshot (`benchmarkFile`, `0600`, written
+  atomically) and caches validated rows in SQLite. Refresh by hand, one command at a time. Malformed
+  or empty files fail rather than erase the cache; failed refreshes keep the last good snapshot.
+- **[DeepSWE](https://deepswe.datacurve.ai/)**: only rows covering all 113 tasks enter a cohort, split
+  by harness and reasoning effort. Pass@1 and pass@4 are never conflated.
+- **[Artificial Analysis](https://artificialanalysis.ai/models)**: the page's published Intelligence
+  Index chart (a selection, not the full catalog), with its exact variants and methodology version.
+  `--api` uses the authenticated Free API instead, with separate Intelligence, Coding and Agentic
+  metrics (needs `ARTIFICIAL_ANALYSIS_API_KEY`).
+- Mappings need an exact cached row and an HTTPS evidence URL. Similar names aren't joined
+  (`gpt-5.6-sol` ≠ `gpt-5-6-sol`), and one effort's score never stands in for another's. Unmapped
+  or stale evidence is neutral, never a silent zero. Coding benchmarks apply only when Jev
+  confidently calls the task coding. Mappings need an inline catalog, not a roster file.
+- Public doesn't mean redistributable. Artificial Analysis's
+  [terms](https://artificialanalysis.ai/docs/legal/Terms-of-Use.pdf) restrict automated collection
+  and redistribution, and its Free API is internal-use only. This package ships code and synthetic
+  fixtures, no fetched data; keep snapshots private and attributed.
+
+</details>
 
 ## Library
 
@@ -57,126 +257,142 @@ import { route, renew, release } from '@nourhelmi/agent-router';
 
 const decision = await route({
   role: 'builder',
-  task: 'Implement the specified parser and verify malformed-input handling.',
-  harness: 'pi',
+  task: 'Implement the parser and verify malformed-input handling.',
+  harness: 'native',
   requestId: 'unique-attempt-id',
-  // pin: { model: 'openai-codex/gpt-6-astra', thinking: 'xhigh' },
+  // pin: { model: 'codex/gpt-6-sol', thinking: 'xhigh' },
 });
 
-// Launch using decision.selected.model and decision.selected.thinking unchanged.
-// Renew every 30s while live; release only after definite termination/failure.
+// Launch exactly decision.selected.model at decision.selected.thinking.
+// Renew the lease while the worker runs; release it once the worker has definitely stopped.
 await renew(decision.id);
 await release(decision.id);
 ```
 
-Exports `route(request, {configPath?, dryRun?})`, `renew(id, {configPath?})`, `release(id, {configPath?})` and public types. Decisions contain exact identity, strategy (`jev`, `fallback`, `pinned`), lease ID/expiry, task/catalog digests, policy and normalized quota snapshots, returned Jev version, per-candidate reasons/scores/distributions, task-scope assessments and benchmark provenance. A model-only pin permits effort selection for that exact model; no pin can override quota/capability/task-scope constraints or introduce an absent candidate. Unrestricted pins skip Jev; task-restricted pins require its scope assessment. `thinking` without `pin.model` is invalid. An unknown role fails unless configured; the compatibility roles `worker`/`freeform` consult builder guidance without changing the caller's role.
+A decision carries the exact pick, its strategy (`jev`, `fallback` or `pinned`), a lease id and
+expiry, task and catalog digests, the policy and quota snapshots used, the Jev version, and every
+candidate's reasons, scores, distributions, scope judgments, cost, track record and benchmark
+provenance.
 
-`AGENT_ROUTER_NO_FEASIBLE_ROUTE` is terminal for that launch, not permission for a caller to choose another model. Missing/disabled config is for the caller to handle; direct `route` requires an enabled valid config. Enabled-but-invalid routing must never silently bypass the router. Configuration/module paths belong to trusted installation settings, never task/tool arguments.
+<details>
+<summary><b>Pins, leases and failure modes</b></summary>
 
-SQLite transactions serialize lease creation across local processes. The same request ID and identical task/constraints return the same live lease; changed inputs or settled IDs are rejected. Renewal never resurrects expired or released leases. Default TTL is five minutes. A caller that loses its lease must stop/reconcile the worker or report the lifecycle uncertainty. Active counts are diagnostic only: they never exclude candidates or lower their scores. Leases track managed workers, not prepaid provider quota; long tasks can still exhaust a provider after launch.
+- A model-only pin lets the router choose that model's effort. No pin overrides quota, capability or
+  scope rules or adds a model the roster lacks. Unscoped pins skip Jev; scoped pins still need its
+  judgment. `worker` and `freeform` roles use builder guidance.
+- `AGENT_ROUTER_NO_FEASIBLE_ROUTE` is terminal for that launch, not permission to pick another model.
+  An enabled but invalid config never silently bypasses the router.
+- SQLite transactions serialize leases across local processes. The same request id with the same
+  inputs returns the same live lease; changed inputs or a settled id are rejected. Renewal never
+  resurrects an expired or released lease. The default lease is five minutes.
+- Leases are bookkeeping, not a concurrency cap: live counts are shown but never exclude or penalize
+  a model, and they don't reserve provider quota. Legacy `maxConcurrent` fields are ignored.
+- Config and module paths belong to trusted installation settings, never to task arguments.
 
-There is no router concurrency-cap setting. Legacy `maxConcurrent` fields are accepted but ignored; new configs omit them. Start fresh managed hosts to load this behavior—already-running hosts retain their loaded code. Keep legacy configs intact while old versions still use them, including for renewal; this version does not need those fields. Provider quotas and caller/transport scheduling limits are separate and unchanged.
+</details>
 
-## Selection policy
+## CLI
 
-The configured candidates are the operator's **currently supported subscription roster**. `init` seeds profile declarations, not account-entitlement discovery; disable or remove unavailable models. Benchmark rows are reference evidence only: collection never creates candidates, and appearing on a leaderboard grants no launch eligibility.
+| Command | Does |
+|---|---|
+| `init [--roster FILE \| --profiles DIR] [--codex \| --codexbar]` | Create a config (never overwrites). |
+| `roster use --file FILE` | Point an existing config at a roster file. |
+| `route --file REQUEST.json [--dry-run]` | Pick a model. `--file -` reads stdin; `--dry-run` reserves nothing (it still refreshes quotas and calls Jev). |
+| `renew ID`, `release ID` | Manage a lease. |
+| `status` | Quotas, leases, roster file and benchmark coverage. |
+| `quota refresh` · `quota ingest` · `quota statusline --pool P` · `quota codexbar --pool P` | Collect or import quota snapshots. |
+| `outcomes record --file F` · `outcomes stats` | Report reviewed results; show track records. |
+| `benchmarks refresh \| import \| export \| list \| map` | Manage the private benchmark snapshot. |
+| `auth typesafe \| artificial-analysis` | Save a key from the environment, privately. |
 
-1. Filter disabled candidates, role/transport mismatches, user pins and reserve violations.
-2. Refresh stale configured collectors with a shared cooldown. Respect every applicable observed quota window; never average five-hour and weekly quotas. An expired reset is **unknown**, never an assumed fresh zero. A still-unexpired exhaustion observation remains a restriction even when another window is missing/stale. Missing windows are not synthesized. Explicit provider permission denials remain restrictive through null/missing updates, staleness and resets until the same binding reports recovery. Provider percentages above 100 remain exhausted.
-3. Ask one batched TypeSafe request: independent per-candidate five-level task-fit Scores, a task-family Choice, and (only when a shortlisted candidate requires it) separate small-task and verification-only Nouls. Only the bounded task packet, role and supplied model-fit guidance leave the process—not environment, account identity, quotas, benchmark files or conversation history. **Do not put secrets/transcripts in the task packet.** Typed judgments are not proof of capability or safety.
-4. Enforce candidate task-scope restrictions, then accept Scores above `jev.minConfidence` (default `0.35`); otherwise use that candidate's configured prior. On API/credential/response failure, use deterministic fallback inside this package, excluding candidates requiring an unconfirmed scope judgment. Record the actual reason. Version pins are checked against the response; `jev-latest` records the resolved model version.
-5. Blend relevant, fresh, exactly mapped benchmark midrank percentiles into fit (default weight `0.15`, maximum `0.5`). Missing evidence is neutral—not zero. Coding benchmarks apply only when the task-family judgment confidently says coding. General intelligence evidence may inform other tasks. Different metrics/cohorts are normalized separately before averaging.
-6. Move fit by the candidate's reviewed track record in this role (see [Outcome feedback](#outcome-feedback); off by default).
-7. Combine quality with quota-headroom utility (default `capacityWeight: 0.2`), subtract `policy.costWeight × cost` (see [Cost](#cost); off by default), then tie-break by configured rank and ID. For known quota, capacity is minimum remaining percentage **after reserve**, divided by 100. Unknown capacity receives neutral utility `0.5`, not an invented observed percentage. Worker/lease counts never affect this utility. `unknown: penalize` subtracts `0.2` utility; `allow` omits that penalty; `exclude` rejects it. Defaults: Codex/Claude penalize, Cursor exclude. Select `exclude` for strict measured-quota operation.
-8. Recheck current quota and request-id/lease state, then record the lease atomically after inference. No network operation holds the database writer lock.
+Commands print JSON and take `--config FILE` (default `AGENT_ROUTER_CONFIG`, then
+`~/.config/agent-router/config.json`). Credentials and the SQLite state live beside the config,
+outside the checkout, as `0600` files in a `0700` directory. Environment keys beat the credentials
+file. Audits omit task text and credentials; task digests are pseudonymous, not anonymous, and old
+rows are yours to prune.
 
-Weights, neutral priors, unknown penalties and confidence thresholds are **explicit heuristics**, not calibrated success probabilities, dollar costs or token budgets. Equal percentage headroom does not imply equal absolute provider capacity. Compare representative tasks to expected choices before treating judgments as quality evidence. `route --dry-run` still refreshes configured quotas and calls Jev: it is nonreserving, not offline/read-only. A small smoke test is not an outcome-quality evaluation. Benchmark freshness currently means source-publication/cache age, not a claim that every model was recently reevaluated.
+## Configuration
 
-### Cost
+`policy` in the config:
 
-Headroom is not cost: a pool with plenty of room can still be the expensive way to do a task. Give each candidate a `cost` from `0` (cheapest) to `1` (dearest): the relative share of your subscription limits one assignment burns, which folds in both the model's appetite and how large that pool's plan is. Set `policy.costWeight` (for example `0.15`) and near-ties go to the cheaper candidate, while a real fit gap still wins: with `0.15`, a candidate at cost `1` needs about `0.16` more fit than one at cost `0`. With `costWeight > 0`, an unpriced candidate counts as cost `1` and reports `cost-unset`. Costs are operator judgments, not token prices.
+| Key | Default | |
+|---|---|---|
+| `capacityWeight` | `0.2` | Weight of quota headroom in the score. |
+| `costWeight` | `0` | Utility subtracted per unit of cost. `0.15` is a good start. |
+| `outcomeWeight` | `0` | How far track record can move fit. `0.5` is a good start. |
+| `outcomePrior` | `6` | Pseudo-observations before a track record dominates. |
+| `outcomeHalfLifeMs` | 30 days | Age at which an outcome counts half. |
+| `benchmarkWeight` | `0.15` | Weight of mapped benchmarks (at most `0.5`). |
+| `benchmarkMaxAgeMs` | 90 days | Older benchmark rows are ignored. |
+| `unknownPenalty` | `0.2` | Subtracted for unknown quota in a `penalize` pool. |
+| `quotaMaxAgeMs` · `refreshCooldownMs` · `refreshTimeoutMs` | 5 min · 1 min · 20 s | Quota freshness. |
+| `leaseMs` | 5 min | Lease lifetime. |
 
-### Outcome feedback
+Pools set `reservePercent` (default 10), an `unknown` policy and an optional `collector`. `jev` sets
+`model` (default `jev-latest`, or pin a version), `timeoutMs` and `minConfidence` (default `0.35`).
 
-Callers report reviewed results, and routing learns from them:
+<details>
+<summary><b>Importing Pi intelligence profiles</b></summary>
 
-```bash
-agent-router outcomes record --file outcome.json   # an object or an array
-agent-router outcomes stats                        # track record per candidate and role
-```
+Without `--roster`, `init` imports the union of `~/.pi/agent/intelligence-profiles/*.json`: every
+model and effort they declare, deduplicated, with their guidance and provenance. Recommendations set
+tie-break ranks per role but not eligibility. Priors start at a neutral `0.7`, and the active profile
+only sets tie-break preference. Later profile switches don't rewrite the config. Imported Cursor
+candidates are Pi-only; a candidate's `harnesses` list is its only transport restriction. Merging
+several profiles tends to make every model sound "preferred", which is why a hand-written roster
+routes better.
 
-An outcome names the `model` (with or without its provider prefix), `thinking`, `role`, `signal` (`review`: a checker's verdict on that work; `grade`: the dispatching parent's verdict) and `success`, plus a caller-unique `id` (recording it again replaces it, so a parent can revise a grade), `at`, `source`, and optional `run` and `note`. Self-reported completion is not an outcome.
+</details>
 
-Per candidate and role, outcomes form a Beta posterior centred on the candidate's `prior`, worth `policy.outcomePrior` pseudo-observations (default `6`), each outcome halved in weight every `policy.outcomeHalfLifeMs` (default 30 days). Fit moves by `policy.outcomeWeight × (posterior − prior)` (default `0`, off). A candidate with no outcomes keeps its fit, and outcomes for models outside the roster are stored but unused. Diagnostics show each candidate's `outcome: { n, mean }`.
+## What it doesn't do
 
-### Restricted task scope
+It picks and explains. It never launches agents, edits prompts, switches accounts, reads project
+files, changes your running model, logs in, spends reset credits, or turns on paid fallback. It
+doesn't cap how many workers you run.
 
-An operator can set `"taskScope": "small-or-verification"` on a candidate. Admission requires a validated Jev Noul probability **>= 0.9** for either the entire task being small/tightly bounded or its deliverable being verification-only. The probabilities are retained in candidate diagnostics; they are not averaged. A checker role, a high fit Score, a benchmark score or a pin is not scope permission. Missing, uncertain, malformed, disabled or unavailable judgments exclude that candidate with `task-scope-unconfirmed`; fallback can still select unrestricted candidates. The threshold is conservative policy, not a calibrated accuracy claim: semantic misclassification remains possible.
+## FAQ
 
-For example, restrict an existing `openai-codex/gpt-6-luna@max` candidate to `roles: ["builder", "checker"]` and `taskScope: "small-or-verification"`, removing any advisor entry from `roleRanks`. Keep only its `max` pair in the roster to forbid lower efforts. Sol and Opus can remain unrestricted; absent Sonnet/obsolete models cannot enter via Jev, pins or benchmarks. These are explicit operator settings, not hardcoded model-name rules or profile-import defaults.
+<details>
+<summary><b>Do I need a TypeSafe API key?</b></summary>
 
-Profile switching does not change this policy, and `init` never overwrites an existing roster. Replacing a roster with newly imported candidates requires reapplying its explicit restrictions. Managed hosts retain captured code/configuration: use a **fresh host/session** to adopt a changed roster; `/reload` does not upgrade the host. Existing live leases retain their original identity and idempotent replay/renew/release behavior. Router-OFF/manual selection is outside this eligibility policy.
+No. Without Jev, each model's fit is its `prior`, so cost, quota and track record decide, and scoped
+models are simply never admitted. Jev is what makes the pick task-aware.
+</details>
 
-`collector.windowModels` maps named/tertiary windows to exact installed model IDs; `[]` explicitly marks an irrelevant scope. Unknown scoped limits constrain all candidates with diagnostics. Direct Codex uses bucket keys such as `codex` or a returned model-specific limit ID, with optional window-specific keys such as `codex:primary`; bucket mappings also scope its permission gates. `ordinary-usage` is always account-wide. No scope is guessed from model aliases or display names. Primary does **not** necessarily mean five hours: durations come from the provider. Spend-control percentages and explicit denials are enforced; credits are not treated as permission to overspend.
+<details>
+<summary><b>Why not always use the best model?</b></summary>
 
-Synthetic placeholders are omitted; unavailable usage/permission data stays unknown. Direct Codex uses the read's **database-admitted start time**, sampled after acquiring the writer lock—not response completion time. This conservatively understates freshness for delayed replies. A monotonic per-binding refresh token distinguishes reads admitted in the same millisecond and fences completion status; delayed older responses cannot masquerade as newer recovery. Cooldown limits attempts, not their overlap. CodexBar preserves `usage.updatedAt`. Failed collection never freshens old evidence. The bounded read-only `initialize → initialized → account/rateLimits/read` exchange and process cleanup are unchanged (CLI protocol previously checked with `codex-cli 0.155.1`; ordering repairs are tested offline).
+Because it's the scarcest. The best model on a mechanical rename costs you the capacity you'll want
+for the design decision tomorrow. The hero above is three real picks from one roster.
+</details>
 
-The cache keeps separate raw/window observations, the latest **per-gate observation** (including null/missing), and the newest **explicit permission fact per gate**, including both `true` and `false`. Windows use the latest snapshot timestamp. At an equal timestamp, incomparable observations retain every distinct window view, including exact model scopes, independent limits and unknown counters; conflicting IDs receive deterministic, noncolliding `quota-view:N` diagnostic IDs. Percentages are never averaged or synthesized, and missing windows are not invented. A genuinely newer snapshot replaces the older window observations; among same-time direct reads, a higher admitted token supersedes lower tokens. Unsequenced imports remain separate and cannot acquire token authority or erase a same-time restriction. Old cache JSON falls back to its stored raw snapshot.
+<details>
+<summary><b>Do I need benchmarks?</b></summary>
 
-Gate `observedAt`, not wrapper freshness, orders permissions: null(T5) in wrapper T5 supersedes true(T4) in wrapper T10 while windows remain at T10; true(T5) likewise supersedes null(T4) inside that newer wrapper. A late known denial still restricts a newer null/missing view; only a strictly newer explicit true recovers it. Equal-time contradictory permissions conservatively deny unless distinct admitted read tokens establish order. A later null/missing observation after a true remains unknown, while a late false older than that true cannot resurrect a denial. Denials retain their observation times and model scopes through staleness and resets.
+No. They're off unless you map them, they rarely separate frontier models, and they lag releases.
+Your own reviewed outcomes are the better signal.
+</details>
 
-For a pool with no collector, both its current binding digest and legacy unbound snapshots are accepted representations of that declared pool. Reads fold their complete raw, per-gate and explicit-fact histories—not just their exposed permission views—and neither representation outranks an applicable denial. Different collector bindings remain isolated. SQLite migration is additive: legacy quota rows are merged when a store opens, without replacing the legacy table or modifying lease/audit rows or IDs. Already-loaded old clients keep their original schema/behavior; reload them to use the repaired cache.
+<details>
+<summary><b>Does it work without crew?</b></summary>
 
-CodexBar does not expose every upstream control; its adapter cannot reconstruct unavailable fields. A percentage snapshot is not proof that a provider will accept a request. Freshness is policy, not which executable is used: defaults are a five-minute quota age and one-minute retry cooldown. For on-demand one-minute observations, set `quotaMaxAgeMs: 60000` and `refreshCooldownMs: 15000`. No background polling is required.
-
-## Private benchmark snapshots
-
-Benchmarks are reference data, **not live dependencies during routing**. `benchmarkFile` is an absolute path to a private JSON array of normalized observations. New configs default to `benchmarks.json` beside config. For a linked checkout, set it to `<checkout>/data/benchmarks.local.json`: `data/` is gitignored and excluded from npm artifacts. Do not force-add fetched data to public Git. Files are written atomically with mode `0600` and retain source URLs, observation times, exact model/effort labels, metric definitions and cohorts.
-
-Refresh periodically when models/results change, running these commands **sequentially** (one manual updater; no daemon or automatic scraping schedule):
-
-```sh
-agent-router benchmarks refresh --source deepswe
-agent-router benchmarks refresh --source artificial-analysis  # public page; no API key
-agent-router benchmarks list
-agent-router benchmarks export --file /private/backup/benchmarks.json
-```
-
-Routing reads the local file and caches validated observations in SQLite; it never fetches benchmark pages. Manual file edits are read on the next route. Missing files preserve legacy cached evidence. Malformed/empty files fail rather than erase the cache: repair the file or move it aside before refreshing/importing. Failed source refreshes preserve the last good snapshot. `benchmarks import --file ...` merges validated observations by source into the configured snapshot. Exports are copies, not a change to the active `benchmarkFile` path.
-
-- **[DeepSWE / DataCurve](https://deepswe.datacurve.ai/)**: reads the page's public `artifacts/v1.1/leaderboard-live.json`. Preserves source model ID, harness/reasoning/configuration variant, pass@1 definition, publication date and sample count. Only rows covering all 113 tasks enter their harness **and reasoning-effort** cohort; unspecified effort remains separate. Pass@4 is not conflated with pass@1. A mini-swe-agent result is evidence, not a measurement of a Pi worker. Hosted result redistribution rights are not established by the repository's license; keep snapshots private.
-- **[Artificial Analysis](https://artificialanalysis.ai/models)**: reads the published JSON-LD Intelligence Index chart, retaining its exact displayed variants and methodology version. This is the page's selected chart cohort, **not the complete model catalog**. Null scores are omitted; capture time is not evaluation time. Missing/ambiguous versions or changed chart structure fail closed. Optional `--api` retains the authenticated, paginated Free API adapter, with separate Intelligence/Coding/Agentic metrics; that mode still requires `ARTIFICIAL_ANALYSIS_API_KEY` or a saved `auth artificial-analysis` credential. Page snapshots require neither.
-
-Public readability is not permission for collection or redistribution. AA's [website terms](https://artificialanalysis.ai/docs/legal/Terms-of-Use.pdf) restrict automated collection and redistribution; its Free API is internal-use-only. Private storage does not itself grant usage rights. This package distributes code and synthetic fixtures, **no fetched dataset**. Keep attribution/provenance with snapshots and obtain appropriate permission for the refresh workflow and any publication.
-
-Mapping requires an exact cached row and explicit supporting evidence:
-
-```sh
-agent-router benchmarks map \
-  --candidate 'openai-codex/gpt-6-astra@xhigh' \
-  --source deepswe --model gpt-6-astra \
-  --variant mini-swe-agent:xhigh:mini_swe_agent_gpt_6_astra_xhigh \
-  --metric pass_at_1 --cohort v1.1:113:mini-swe-agent:xhigh \
-  --evidence-url https://developers.openai.com/api/docs/models/gpt-6-astra
-```
-
-Verify the local provider's actual backend identity and matching effort before applying a mapping. Punctuation similarity is not a join rule; `gpt-5.6-sol` and `gpt-5-6-sol` are not automatically merged. Explicit mappings carry an evidence URL/date. Unmapped, stale or irrelevant data is visible and cannot quietly become a zero score. Do not map a measurement from one reasoning effort onto another.
-
-## Other CLI operations
-
-```sh
-agent-router route --file request.json --dry-run
-agent-router quota ingest --file snapshot.json
-agent-router quota codexbar --pool codex --file previously-captured.json
-# Feed a fresh Claude status-line stdin payload; leaves stdout empty:
-agent-router quota statusline --pool claude
-agent-router benchmarks import --file normalized-observations.json
-agent-router release DECISION_ID
-agent-router --help
-```
-
-Statusline ingestion does not install or replace a user's statusline. Only pipe a freshly observed payload; do not relabel an old file with a new observation time. Use normalized snapshot ingestion to preserve a saved timestamp. Keys come from environment or private credential storage, not CLI arguments. Audit decisions omit task text and credentials; task digests are pseudonymous, not guaranteed anonymization. Local audits have no automatic retention limit; remove/archive settled historical rows according to your own retention policy.
+Yes. crew is one caller. Anything that can run the CLI or import the library can route with it; the
+roster format and the outcome contract are documented above.
+</details>
 
 ## Verification
 
-`npm test` builds and runs offline `node:test` checks: hard eligibility, unknown/stale/over-limit/scoped quotas, authenticated-source boundaries, exact pins, Jev schema/failure handling, variant mappings, count-independent selection, uncapped process-shared leases, idempotence, nonresurrectable leases, CLI behavior, private file permissions and package contents. No test needs provider credentials. Live telemetry/Jev/benchmark verification is separate from these fixtures.
+`npm test` builds and runs the offline suite: eligibility, quota edge cases (unknown, stale, scoped,
+over-limit, conflicting), pins, Jev schema and failure handling, rosters, cost, outcomes, benchmark
+mappings, idempotent and non-resurrecting leases, CLI behavior, private file permissions and package
+contents. No test needs a provider credential; live checks against Jev, quotas and leaderboards are
+separate.
+
+## Contributing
+
+Issues and pull requests are welcome. Keep it dependency-free and fail-closed: evidence the router
+can't verify stays unknown, never assumed. Run `npm test` and `npm run typecheck` before sending.
+
+## License
+
+[MIT](LICENSE)
