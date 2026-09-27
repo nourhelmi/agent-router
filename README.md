@@ -74,11 +74,11 @@ and track record decide.
 
 ```mermaid
 flowchart LR
-    T["task + role"] --> E{"eligible?"}
-    E -->|"role, harness, pin, quota reserve, task scope"| J["Jev scores fit<br>for each model"]
-    J --> Q["quality = fit<br>± track record<br>± benchmarks"]
-    Q --> U["score = 0.8·quality<br>+ 0.2·headroom<br>− costWeight·cost"]
-    U --> P["pick, lease<br>and diagnostics"]
+    T["task + role"] --> E{"filter"}
+    E --> J["Jev fit"]
+    J --> Q["± track record"]
+    Q --> U["score"]
+    U --> P["pick"]
 ```
 
 1. **Filter.** Disabled models, the wrong role or harness, a pin that names another model, a quota
@@ -103,17 +103,21 @@ by hand. The config's `rosterFile` points at it, and it's re-read on every route
 
 ```json
 { "models": [
-  { "model": "codex/gpt-6-sol", "effort": "high", "roles": ["advisor", "builder"], "cost": 0.15,
+  { "model": "codex/gpt-6-sol", "effort": "high",
+    "roles": ["advisor", "builder"], "cost": 0.15,
     "about": "the workhorse",
-    "use": "implementation whose approach is clear; lanes that execute a known plan",
-    "avoid": "open product or architecture decisions; subtle money or security logic" },
-  { "model": "claude/claude-opus-5-5", "effort": "high", "roles": ["advisor", "builder"], "cost": 1,
+    "use": "implementation whose approach is clear; lanes that run a known plan",
+    "avoid": "open product or architecture decisions; subtle money logic" },
+  { "model": "claude/claude-opus-5-5", "effort": "high",
+    "roles": ["advisor", "builder"], "cost": 1,
     "about": "the strongest judgment",
     "use": "lanes whose hard part is deciding what to build; greenfield UX",
-    "avoid": "work whose approach is already decided; review or verification" },
-  { "model": "codex/gpt-6-luna", "effort": "max", "roles": ["builder", "checker"], "cost": 0.05,
-    "use": "mechanical edits with an exact spec; scripted checks with a fixed pass condition",
-    "avoid": "judging evidence, review, debugging", "scope": "small-or-verification" }
+    "avoid": "work whose approach is already decided; review" },
+  { "model": "codex/gpt-6-luna", "effort": "max",
+    "roles": ["builder", "checker"], "cost": 0.05,
+    "use": "mechanical edits with an exact spec; scripted checks",
+    "avoid": "judging evidence, review, debugging",
+    "scope": "small-or-verification" }
 ] }
 ```
 
