@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="694" viewBox="0 0 1200 694" role="img" aria-label="agent-router picks a model for three tasks: a rename goes to cheap Luna on a near-tie, a design decision goes to Opus on a clear fit gap, and a money-code review goes to Sol xhigh">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="724" viewBox="0 0 1200 724" role="img" aria-label="agent-router picks a model for three tasks: a rename goes to cheap Luna on a near-tie, a design decision goes to Opus on a clear fit gap, and a money-code review goes to Sol xhigh">
 <title>agent-router decisions on three tasks</title>
-<rect width="1200" height="694" rx="16" fill="#16161e"/>
+<rect width="1200" height="724" rx="16" fill="#16161e"/>
 <text x="36" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="700" fill="#e0e6ff" text-anchor="start">Same roster, three tasks</text>
 <text x="360" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">fit (Jev)</text>
 <text x="700" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">cost</text>
 <text x="800" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">score</text>
-<rect x="36" y="76" width="1128" height="228" rx="12" fill="#1a1b26" stroke="#292e42"/>
+<rect x="36" y="76" width="1128" height="258" rx="12" fill="#1a1b26" stroke="#292e42"/>
 <rect x="56" y="94" width="80" height="24" rx="12" fill="none" stroke="#7aa2f7"/>
 <text x="96.1" y="111" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="600" fill="#7aa2f7" text-anchor="middle">builder</text>
 <text x="148.2" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="600" fill="#c0caf5" text-anchor="start">“Rename formatDuration to formatElapsed across packages/ui”</text>
@@ -17,98 +17,107 @@
 <text x="622" y="150" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.93</text>
 <text x="700" y="150" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.05</text>
 <rect x="800" y="138" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="138" width="205" height="8" rx="4" fill="#9ece6a"/>
-<text x="1042" y="150" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.893</text>
+<rect x="800" y="138" width="204" height="8" rx="4" fill="#9ece6a"/>
+<text x="1042" y="150" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.885</text>
 <rect x="1100" y="133" width="56" height="22" rx="11" fill="#9ece6a"/>
 <text x="1128" y="149" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#16161e" text-anchor="middle">pick</text>
 <circle cx="64" cy="175" r="5" fill="#7dcfff" opacity="0.55"/>
 <text x="80" y="180" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-sol@high</text>
 <rect x="360" y="168" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="168" width="238" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
-<text x="622" y="180" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.95</text>
+<rect x="360" y="168" width="218" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
+<text x="622" y="180" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.87</text>
 <text x="700" y="180" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.15</text>
 <rect x="800" y="168" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="168" width="205" height="8" rx="4" fill="#565f89"/>
-<text x="1042" y="180" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.892</text>
+<rect x="800" y="168" width="198" height="8" rx="4" fill="#565f89"/>
+<text x="1042" y="180" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.859</text>
 <circle cx="64" cy="205" r="5" fill="#7dcfff" opacity="0.55"/>
-<text x="80" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-sol@xhigh</text>
+<text x="80" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-sol@max</text>
 <rect x="360" y="198" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="198" width="58" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
-<text x="622" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.23</text>
-<text x="700" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.25</text>
+<rect x="360" y="198" width="72" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
+<text x="622" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.29</text>
+<text x="700" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.40</text>
 <rect x="800" y="198" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="198" width="70" height="8" rx="4" fill="#565f89"/>
-<text x="1042" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.303</text>
+<rect x="800" y="198" width="73" height="8" rx="4" fill="#565f89"/>
+<text x="1042" y="210" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.316</text>
 <circle cx="64" cy="235" r="5" fill="#7dcfff" opacity="0.55"/>
-<text x="80" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-sol@max</text>
+<text x="80" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-sol@xhigh</text>
 <rect x="360" y="228" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="228" width="60" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
-<text x="622" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.24</text>
-<text x="700" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.40</text>
+<rect x="360" y="228" width="52" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
+<text x="622" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.21</text>
+<text x="700" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.25</text>
 <rect x="800" y="228" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="228" width="67" height="8" rx="4" fill="#565f89"/>
-<text x="1042" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.290</text>
+<rect x="800" y="228" width="64" height="8" rx="4" fill="#565f89"/>
+<text x="1042" y="240" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.279</text>
 <circle cx="64" cy="265" r="5" fill="#ff9e64" opacity="0.55"/>
-<text x="80" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">claude/claude-opus-5-5@high</text>
+<text x="80" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">claude/claude-sonnet-5-5@xhigh</text>
 <rect x="360" y="258" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="258" width="45" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
-<text x="622" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.18</text>
-<text x="700" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">1.00</text>
+<rect x="360" y="258" width="42" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
+<text x="622" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.17</text>
+<text x="700" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.45</text>
 <rect x="800" y="258" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="258" width="17" height="8" rx="4" fill="#565f89"/>
-<text x="1042" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.074</text>
-<rect x="36" y="322" width="1128" height="138" rx="12" fill="#1a1b26" stroke="#292e42"/>
-<rect x="56" y="340" width="80" height="24" rx="12" fill="none" stroke="#7aa2f7"/>
-<text x="96.1" y="357" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="600" fill="#7aa2f7" text-anchor="middle">advisor</text>
-<text x="148.2" y="358" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="600" fill="#c0caf5" text-anchor="start">“Decide the group-sessions model (data, billing, UX), then drive it”</text>
-<text x="1144" y="358" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="end">A real fit gap: the dearest model wins.</text>
-<circle cx="64" cy="391" r="5" fill="#ff9e64" opacity="1"/>
-<text x="80" y="396" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="600" fill="#e0e6ff" text-anchor="start">claude/claude-opus-5-5@high</text>
-<rect x="360" y="384" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="384" width="220" height="8" rx="4" fill="#7aa2f7" opacity="1"/>
-<text x="622" y="396" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.88</text>
-<text x="700" y="396" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">1.00</text>
-<rect x="800" y="384" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="384" width="145" height="8" rx="4" fill="#9ece6a"/>
-<text x="1042" y="396" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.630</text>
-<rect x="1100" y="379" width="56" height="22" rx="11" fill="#9ece6a"/>
-<text x="1128" y="395" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#16161e" text-anchor="middle">pick</text>
-<circle cx="64" cy="421" r="5" fill="#7dcfff" opacity="0.55"/>
-<text x="80" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-sol@high</text>
+<rect x="800" y="258" width="30" height="8" rx="4" fill="#565f89"/>
+<text x="1042" y="270" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.131</text>
+<circle cx="64" cy="295" r="5" fill="#ff9e64" opacity="0.55"/>
+<text x="80" y="300" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">claude/claude-opus-5-5@high</text>
+<rect x="360" y="288" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
+<rect x="360" y="288" width="35" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
+<text x="622" y="300" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.14</text>
+<text x="700" y="300" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">1.00</text>
+<rect x="800" y="288" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
+<rect x="800" y="288" width="6" height="8" rx="4" fill="#565f89"/>
+<text x="1042" y="300" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.028</text>
+<rect x="36" y="352" width="1128" height="138" rx="12" fill="#1a1b26" stroke="#292e42"/>
+<rect x="56" y="370" width="80" height="24" rx="12" fill="none" stroke="#7aa2f7"/>
+<text x="96.1" y="387" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="600" fill="#7aa2f7" text-anchor="middle">advisor</text>
+<text x="148.2" y="388" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="600" fill="#c0caf5" text-anchor="start">“Decide the group-sessions model (data, billing, UX), then drive it”</text>
+<text x="1144" y="388" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="end">A real fit gap: the dearest model wins.</text>
+<circle cx="64" cy="421" r="5" fill="#ff9e64" opacity="1"/>
+<text x="80" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="600" fill="#e0e6ff" text-anchor="start">claude/claude-opus-5-5@high</text>
 <rect x="360" y="414" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="414" width="20" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
-<text x="622" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.08</text>
-<text x="700" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.15</text>
+<rect x="360" y="414" width="220" height="8" rx="4" fill="#7aa2f7" opacity="1"/>
+<text x="622" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.88</text>
+<text x="700" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">1.00</text>
 <rect x="800" y="414" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="414" width="46" height="8" rx="4" fill="#565f89"/>
-<text x="1042" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.200</text>
-<rect x="36" y="478" width="1128" height="168" rx="12" fill="#1a1b26" stroke="#292e42"/>
-<rect x="56" y="496" width="80" height="24" rx="12" fill="none" stroke="#7aa2f7"/>
-<text x="96.1" y="513" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="600" fill="#7aa2f7" text-anchor="middle">checker</text>
-<text x="148.2" y="514" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="600" fill="#c0caf5" text-anchor="start">“Fresh review of the refunds diff: idempotency, rounding, signatures”</text>
-<text x="1144" y="514" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="end">Luna is only allowed small or verify-only tasks.</text>
-<circle cx="64" cy="547" r="5" fill="#7dcfff" opacity="1"/>
-<text x="80" y="552" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="600" fill="#e0e6ff" text-anchor="start">codex/gpt-6-sol@xhigh</text>
-<rect x="360" y="540" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="540" width="245" height="8" rx="4" fill="#7aa2f7" opacity="1"/>
-<text x="622" y="552" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.98</text>
-<text x="700" y="552" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.25</text>
-<rect x="800" y="540" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="540" width="209" height="8" rx="4" fill="#9ece6a"/>
-<text x="1042" y="552" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.907</text>
-<rect x="1100" y="535" width="56" height="22" rx="11" fill="#9ece6a"/>
-<text x="1128" y="551" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#16161e" text-anchor="middle">pick</text>
-<circle cx="64" cy="577" r="5" fill="#ff9e64" opacity="0.55"/>
-<text x="80" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">claude/claude-sonnet-5@high</text>
+<rect x="800" y="414" width="145" height="8" rx="4" fill="#9ece6a"/>
+<text x="1042" y="426" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.630</text>
+<rect x="1100" y="409" width="56" height="22" rx="11" fill="#9ece6a"/>
+<text x="1128" y="425" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#16161e" text-anchor="middle">pick</text>
+<circle cx="64" cy="451" r="5" fill="#7dcfff" opacity="0.55"/>
+<text x="80" y="456" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-sol@high</text>
+<rect x="360" y="444" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
+<rect x="360" y="444" width="20" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
+<text x="622" y="456" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.08</text>
+<text x="700" y="456" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.15</text>
+<rect x="800" y="444" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
+<rect x="800" y="444" width="46" height="8" rx="4" fill="#565f89"/>
+<text x="1042" y="456" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.200</text>
+<rect x="36" y="508" width="1128" height="168" rx="12" fill="#1a1b26" stroke="#292e42"/>
+<rect x="56" y="526" width="80" height="24" rx="12" fill="none" stroke="#7aa2f7"/>
+<text x="96.1" y="543" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="600" fill="#7aa2f7" text-anchor="middle">checker</text>
+<text x="148.2" y="544" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="600" fill="#c0caf5" text-anchor="start">“Fresh review of the refunds diff: idempotency, rounding, signatures”</text>
+<text x="1144" y="544" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="end">Luna is only allowed small or verify-only tasks.</text>
+<circle cx="64" cy="577" r="5" fill="#7dcfff" opacity="1"/>
+<text x="80" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="600" fill="#e0e6ff" text-anchor="start">codex/gpt-6-sol@xhigh</text>
 <rect x="360" y="570" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="360" y="570" width="48" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
-<text x="622" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.19</text>
-<text x="700" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.35</text>
+<rect x="360" y="570" width="248" height="8" rx="4" fill="#7aa2f7" opacity="1"/>
+<text x="622" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.99</text>
+<text x="700" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.25</text>
 <rect x="800" y="570" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
-<rect x="800" y="570" width="41" height="8" rx="4" fill="#565f89"/>
-<text x="1042" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.178</text>
+<rect x="800" y="570" width="208" height="8" rx="4" fill="#9ece6a"/>
+<text x="1042" y="582" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#c0caf5" text-anchor="start">0.903</text>
+<rect x="1100" y="565" width="56" height="22" rx="11" fill="#9ece6a"/>
+<text x="1128" y="581" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#16161e" text-anchor="middle">pick</text>
 <circle cx="64" cy="607" r="5" fill="#7dcfff" opacity="0.55"/>
 <text x="80" y="612" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">codex/gpt-6-luna@max</text>
 <text x="360" y="612" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">excluded: not a small task</text>
-<text x="36" y="674" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">score = 0.8 × fit + 0.2 × quota headroom − 0.15 × cost. Real dry-runs; fit comes from each model’s use/avoid notes.</text>
+<circle cx="64" cy="637" r="5" fill="#ff9e64" opacity="0.55"/>
+<text x="80" y="642" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" font-weight="400" fill="#565f89" text-anchor="start">claude/claude-sonnet-5-5@xhigh</text>
+<rect x="360" y="630" width="250" height="8" rx="4" fill="#3b4261" opacity=".5"/>
+<rect x="360" y="630" width="35" height="8" rx="4" fill="#7aa2f7" opacity="0.45"/>
+<text x="622" y="642" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.14</text>
+<text x="700" y="642" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.45</text>
+<rect x="800" y="630" width="230" height="8" rx="4" fill="#3b4261" opacity=".5"/>
+<rect x="800" y="630" width="25" height="8" rx="4" fill="#565f89"/>
+<text x="1042" y="642" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">0.109</text>
+<text x="36" y="704" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#565f89" text-anchor="start">score = 0.8 × fit + 0.2 × quota headroom − 0.15 × cost. Real dry-runs; fit comes from each model’s use/avoid notes.</text>
 </svg>
