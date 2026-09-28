@@ -31,7 +31,7 @@
 <br>
 
 <p align="center">
-  <img src="assets/hero.svg" alt="agent-router decisions on three tasks: a rename goes to the cheap model on a near-tie, a design decision goes to Opus on a clear fit gap, and a money-code review goes to Sol at xhigh" width="100%">
+  <img src="assets/hero.svg" alt="agent-router decisions on three tasks: a rename goes to Sol on its track record in a near-tie with cheaper Luna, a design decision goes to Opus on a clear fit gap, and a money-code review goes to Sol at xhigh" width="100%">
 </p>
 
 ## Why agent-router
