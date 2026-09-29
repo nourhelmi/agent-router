@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util';
 import { access } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { applyRoster, defaultConfigPath, initialConfig, loadConfig, parseConfig, privateJson, readJson, check, object, benchmarks, outcomes, quotaSnapshot } from './config.js';
+import { applyRoster, defaultConfigPath, initialConfig, loadConfig, parseConfig, privateJson, readJson, rosterCandidates, check, object, benchmarks, outcomes, quotaSnapshot } from './config.js';
 import { matchesOutcome, outcomeScore, roleKey } from './engine.js';
 import { importProfiles } from './profiles.js';
 import { fetchBenchmarks, readBenchmarkFile } from './benchmarks.js';
@@ -15,6 +15,7 @@ import { RouterError, type RouteRequest, type BenchmarkSource } from './types.js
 const help = `agent-router commands (JSON on stdout; local state is private):
   init [--roster FILE | --profiles DIR] [--codex | --codexbar] [--config FILE]   create config; never overwrite
   roster use --file ROSTER.json                       read candidates from a plain roster file
+  roster check [--file ROSTER.json]                   validate a roster (default: the config's rosterFile)
   route --file REQUEST.json [--dry-run]              --file - reads stdin
   release ID | renew ID
   status                                             quotas, leases, evidence coverage
@@ -74,8 +75,15 @@ async function main(): Promise<void> {
   if (command === 'release' || command === 'renew') {
     check(sub, 'Decision ID required'); await (command === 'release' ? release : renew)(sub, { configPath: path }); output({ [command]: sub }); return;
   }
+  if (command === 'roster' && sub === 'check') {
+    // Validates without loading the rest of the config, so it works on the file a broken config points at.
+    const file = values.file ?? object(await readJson(path)).rosterFile;
+    check(typeof file === 'string' && file, 'Usage: roster check [--file ROSTER.json] (default: the config\'s rosterFile)');
+    const rosterFile = resolve(file);
+    output({ rosterFile, candidates: rosterCandidates(await readJson(rosterFile)).map(c => c.id) }); return;
+  }
   if (command === 'roster') {
-    check(sub === 'use' && values.file, 'Usage: roster use --file ROSTER.json');
+    check(sub === 'use' && values.file, 'Usage: roster use --file ROSTER.json | roster check [--file ROSTER.json]');
     const raw = object(await readJson(path)), rosterFile = resolve(values.file);
     parseConfig(applyRoster(structuredClone({ ...raw, rosterFile }), await readJson(rosterFile)));
     await privateJson(path, { ...raw, rosterFile, candidates: [] });

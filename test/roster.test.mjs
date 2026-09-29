@@ -26,7 +26,11 @@ test('a roster expands into candidates: host is the pool, file order is preferen
   assert.deepEqual(kimi.harnesses, ['native']); assert.equal(kimi.cost, 0.1); assert.equal(kimi.prior, 0.7);
   assert.equal(luna.taskScope, 'small-or-verification'); assert.equal(luna.enabled, false);
   assert.throws(() => rosterCandidates({ models: [{ ...roster.models[0], model: 'no-host' }] }), /<host>\/<model id>/);
-  assert.throws(() => rosterCandidates({ models: [{ ...roster.models[0], fit: 'x' }] }), /Unsupported roster field/);
+  assert.throws(() => rosterCandidates({ models: [{ ...roster.models[0], fit: 'x' }] }), /models\[0\] \(claude\/claude-opus-5-5\) has an unsupported field "fit"/);
+  // A hand-edited roster must say which entry and field are wrong, with the limit.
+  assert.throws(() => rosterCandidates({ models: [roster.models[1], { ...roster.models[0], about: 'x'.repeat(207) }] }),
+    /roster models\[1\] \(claude\/claude-opus-5-5\) about must be text of 1-200 characters \(it is 207\)/);
+  assert.throws(() => rosterCandidates({ models: [{ ...roster.models[0], cost: 2 }] }), /models\[0\] \(claude\/claude-opus-5-5\) cost must be a number from 0 to 1/);
   assert.throws(() => rosterCandidates({ models: [] }), /nonempty/);
 });
 
@@ -56,4 +60,9 @@ test('CLI: init --roster needs no profiles, and roster use switches an existing 
   await writeFile(other, JSON.stringify({ models: [roster.models[1]] }));
   assert.deepEqual(run('roster', 'use', '--file', other, '--config', path).candidates, ['opencode/opencode-go/kimi-k3@max']);
   assert.throws(() => execFileSync(process.execPath, [cli, 'benchmarks', 'map', '--candidate', 'x', '--config', path], { stdio: 'pipe' }));
+  // roster check validates the config's roster file (or --file) and names what is wrong.
+  assert.deepEqual(run('roster', 'check', '--config', path), { rosterFile: other, candidates: ['opencode/opencode-go/kimi-k3@max'] });
+  await writeFile(other, JSON.stringify({ models: [{ ...roster.models[1], about: 'y'.repeat(300) }] }));
+  assert.throws(() => execFileSync(process.execPath, [cli, 'roster', 'check', '--config', path], { stdio: 'pipe', encoding: 'utf8' }),
+    e => /about must be text of 1-200 characters \(it is 300\)/.test(`${e.stdout}${e.stderr}`));
 });

@@ -13,11 +13,14 @@ export function object(value: unknown): Record<string, any> {
   check(value !== null && typeof value === 'object' && !Array.isArray(value), 'Expected an object');
   return value as Record<string, any>;
 }
-export function text(value: unknown, max = 4096): asserts value is string {
-  check(typeof value === 'string' && value.trim().length > 0 && value.length <= max, 'Invalid string');
+/** `label` names the field in the error; hand-edited files need it to be fixable. */
+export function text(value: unknown, max = 4096, label?: string): asserts value is string {
+  check(typeof value === 'string' && value.trim().length > 0 && value.length <= max, !label ? 'Invalid string'
+    : `${label} must be text of 1-${max} characters${typeof value === 'string' ? ` (it is ${value.length})` : ''}`);
 }
-export function number(value: unknown, min: number, max: number): asserts value is number {
-  check(typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max, 'Invalid numeric value');
+export function number(value: unknown, min: number, max: number, label?: string): asserts value is number {
+  check(typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max,
+    label ? `${label} must be a number from ${min} to ${max}` : 'Invalid numeric value');
 }
 export function strings(value: unknown): asserts value is string[] {
   check(Array.isArray(value) && value.length <= 1000, 'Expected bounded string array');
@@ -152,19 +155,21 @@ const ROSTER_FIELDS = ['model', 'effort', 'roles', 'cost', 'about', 'use', 'avoi
 export function rosterCandidates(value: unknown): Candidate[] {
   const models = object(value).models;
   check(Array.isArray(models) && models.length > 0 && models.length <= 100, 'Roster needs a nonempty models list');
-  const entries = models.map((raw: unknown) => {
+  const entries = models.map((raw: unknown, index: number) => {
     const e = object(raw);
-    check(Object.keys(e).every(k => ROSTER_FIELDS.includes(k)), 'Unsupported roster field');
-    text(e.model, 256); check(/^[^/\s]+\/\S+$/.test(e.model), 'Roster model must be <host>/<model id>');
-    check(thinkingLevels.includes(e.effort), 'Invalid roster effort');
-    strings(e.roles); check(e.roles.length > 0, 'Roster entry needs roles');
-    number(e.cost, 0, 1); text(e.use, 4000);
-    if (e.about !== undefined) text(e.about, 200);
-    if (e.avoid !== undefined) text(e.avoid, 4000);
-    if (e.scope !== undefined) check(e.scope === 'small-or-verification', 'Invalid roster scope');
-    if (e.prior !== undefined) number(e.prior, 0, 1);
-    if (e.pool !== undefined) text(e.pool, 64);
-    if (e.enabled !== undefined) check(typeof e.enabled === 'boolean', 'Roster enabled must be boolean');
+    const at = `roster models[${index}]${typeof e.model === 'string' ? ` (${e.model})` : ''}`;
+    const unknown = Object.keys(e).find(k => !ROSTER_FIELDS.includes(k));
+    check(unknown === undefined, `${at} has an unsupported field "${unknown}"`);
+    text(e.model, 256, `${at} model`); check(/^[^/\s]+\/\S+$/.test(e.model), `${at} model must be <host>/<model id>`);
+    check(thinkingLevels.includes(e.effort), `${at} effort must be one of ${thinkingLevels.join(', ')}`);
+    strings(e.roles); check(e.roles.length > 0, `${at} needs roles`);
+    number(e.cost, 0, 1, `${at} cost`); text(e.use, 4000, `${at} use`);
+    if (e.about !== undefined) text(e.about, 200, `${at} about`);
+    if (e.avoid !== undefined) text(e.avoid, 4000, `${at} avoid`);
+    if (e.scope !== undefined) check(e.scope === 'small-or-verification', `${at} scope must be small-or-verification`);
+    if (e.prior !== undefined) number(e.prior, 0, 1, `${at} prior`);
+    if (e.pool !== undefined) text(e.pool, 64, `${at} pool`);
+    if (e.enabled !== undefined) check(typeof e.enabled === 'boolean', `${at} enabled must be true or false`);
     return e as RosterEntry;
   });
   const order = new Map<string, string[]>();

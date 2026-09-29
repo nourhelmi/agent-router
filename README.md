@@ -31,7 +31,7 @@
 <br>
 
 <p align="center">
-  <img src="assets/hero.svg" alt="agent-router decisions on three tasks: a rename goes to Sol on its track record in a near-tie with cheaper Luna, a design decision goes to Opus on a clear fit gap, and a money-code review goes to Sol at xhigh" width="100%">
+  <img src="assets/hero.svg" alt="agent-router decisions on three tasks: a rename goes to the cheap model when both fit, a design decision goes to Opus on a clear fit gap, and a money-code review goes to Sol at xhigh" width="100%">
 </p>
 
 ## Why agent-router
@@ -306,6 +306,7 @@ provenance.
 |---|---|
 | `init [--roster FILE \| --profiles DIR] [--codex \| --codexbar]` | Create a config (never overwrites). |
 | `roster use --file FILE` | Point an existing config at a roster file. |
+| `roster check [--file FILE]` | Validate a roster (default: the config's) and name any entry and field that is wrong. |
 | `route --file REQUEST.json [--dry-run]` | Pick a model. `--file -` reads stdin; `--dry-run` reserves nothing (it still refreshes quotas and calls Jev). |
 | `renew ID`, `release ID` | Manage a lease. |
 | `status` | Quotas, leases, roster file and benchmark coverage. |
