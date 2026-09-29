@@ -107,7 +107,7 @@ by hand. The config's `rosterFile` points at it, and it's re-read on every route
 
 ```json
 { "models": [
-  { "model": "codex/gpt-6-sol", "effort": "high",
+  { "model": "codex/gpt-6.1-sol", "effort": "high",
     "roles": ["advisor", "builder"], "cost": 0.15,
     "about": "the workhorse",
     "use": "implementation whose approach is clear; lanes that run a known plan",
@@ -269,7 +269,7 @@ const decision = await route({
   task: 'Implement the parser and verify malformed-input handling.',
   harness: 'native',
   requestId: 'unique-attempt-id',
-  // pin: { model: 'codex/gpt-6-sol', thinking: 'xhigh' },
+  // pin: { model: 'codex/gpt-6.1-sol', thinking: 'xhigh' },
 });
 
 // Launch exactly decision.selected.model at decision.selected.thinking.
